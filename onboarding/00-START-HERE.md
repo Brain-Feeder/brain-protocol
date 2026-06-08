@@ -20,12 +20,15 @@ Throughout, `<SYSTEM>` is your system's short id (e.g. `acme`), `<SYSTEM NAME>` 
 
 ---
 
-## STEP 1 — Drop in the two endpoints
+## STEP 1 — Drop in the endpoints
 Copy the whole `agent/` folder into your server: `protocol.ts` (the vocabulary, bundled — no install
-needed), `agent.ts`, and the two route files. They expose `GET /api/agent/card` and
-`POST /api/agent/a2a`. (Not Next.js? The handler bodies are plain Web Fetch API — port the few lines.)
+needed), `agent.ts`, and the route files. They expose four endpoints:
+`GET /api/agent/card`, `POST /api/agent/a2a`, and the OAuth "Connect & Allow" pair
+`GET /api/agent/authorize` (consent screen) + `POST /api/agent/token`. (Not Next.js? The handler
+bodies are plain Web Fetch API — port the few lines.)
 
-**DONE WHEN:** `GET /api/agent/card` returns JSON, and `POST /api/agent/a2a` with no token → `401`.
+**DONE WHEN:** `GET /api/agent/card` returns JSON (with `auth.type: "oauth2.1"`), and
+`POST /api/agent/a2a` with no token → `401`.
 
 ## STEP 2 — Set your identity and wire the four methods to your data
 Set your identity (`AGENT_SYSTEM_ID` / `AGENT_SYSTEM_NAME` env vars, or edit the consts at the top of
@@ -40,12 +43,16 @@ Keep the shapes exactly: `id` is a real uuid, `source` is `<SYSTEM>`, `external_
 
 **DONE WHEN:** each method returns your own data in the protocol shapes.
 
-## STEP 3 — Issue the hub a token
-Set `AGENT_ACCESS_TOKEN` to a strong secret — the token you hand a hub. (One static token is fine to
-start; per-hub tokens later.)
+## STEP 3 — Auth: Connect & Allow (OAuth), token as fallback
+The kit ships **OAuth 2.1 "Connect & Allow"** out of the box: a hub sends the user to your
+`/api/agent/authorize` consent screen ("Allow Brainfeeder to access tasks · presence"), and on
+approval the kit issues a one-time code that the hub swaps for a bearer token at `/api/agent/token`
+(PKCE-protected). **The user never copies a token.** A real system gates the consent screen behind its
+own login first; brand it as your own. The bearer token returned is `AGENT_ACCESS_TOKEN` — set it to a
+strong secret. (A hub can also still use that token directly for a quick dev connect, the fallback path.)
 
-**DONE WHEN:** `POST /api/agent/a2a` with `Authorization: Bearer <token>` + `{"method":"presence.query"}`
-returns `200` with a summary.
+**DONE WHEN:** `GET /api/agent/authorize?...` shows a consent page, and an authenticated
+`POST /api/agent/a2a` `{"method":"presence.query"}` returns `200` with a summary.
 
 ## STEP 4 — Prove conformance (the gate)
 From the **kit root** (the folder that holds `package.json` and `conformance/` — a sibling of

@@ -5,6 +5,7 @@
 //
 // Shapes come from the bundled `protocol.ts` (a mirror of @brainfeed/protocol) so this runs the
 // moment you copy it. Once the package is on your registry, swap to: import … from '@brainfeed/protocol'.
+import { createHash, randomBytes } from 'crypto';
 import type { AgentCard, Activity, Entity } from './protocol';
 import { PROTOCOL_VERSION } from './protocol';
 
@@ -26,7 +27,9 @@ export function agentCard(origin: string): AgentCard {
     system_id: SYSTEM_ID,
     name: SYSTEM_NAME,
     protocol_version: PROTOCOL_VERSION,
-    auth: { type: 'bearer', scopes: ['tasks', 'projects', 'presence'] },
+    // OAuth 2.1 "Connect & Allow": the hub sends the user to authorize_url to log in + approve, then
+    // exchanges the returned code at token_url for the bearer token used on every A2A call.
+    auth: { type: 'oauth2.1', authorize_url: `${origin}/api/agent/authorize`, token_url: `${origin}/api/agent/token`, scopes: ['tasks', 'projects', 'presence'] },
     capabilities: [
       { name: 'tasks', verbs: ['read', 'query', 'act'] },   // → activities.query + action.execute
       { name: 'projects', verbs: ['read'] },                 // → entities.query
@@ -91,4 +94,45 @@ export function handleA2A(method: string, params: Record<string, unknown>): A2AR
     default:
       return { status: 400, body: { error: `unknown method '${method}'` } };
   }
+}
+
+// 4) OAuth 2.1 "Connect & Allow" (authorization-code + PKCE). The hub sends the user to the consent
+//    screen below; on approval you issue a one-time code; the hub swaps it for the bearer token.
+//    Reference store is in-memory (fine for a demo); a real system persists codes, short-lived.
+const b64url = (b: Buffer) => b.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const codes = new Map<string, { challenge: string; scope: string }>();
+
+export function issueCode(challenge: string, scope: string): string {
+  const code = b64url(randomBytes(24));
+  codes.set(code, { challenge, scope });
+  setTimeout(() => codes.delete(code), 5 * 60_000);   // expire in 5 minutes
+  return code;
+}
+
+export function redeemCode(code: string, verifier: string): string | null {
+  const rec = codes.get(code);
+  if (!rec) return null;
+  codes.delete(code);                                  // single use
+  const challenge = b64url(createHash('sha256').update(verifier).digest());
+  if (challenge !== rec.challenge) return null;        // PKCE check
+  return TOKEN;                                         // the bearer token the hub will use on A2A
+}
+
+// The consent screen the user is redirected to. A REAL system gates this behind its own login first
+// (so the user is authenticated before approving); the reference skips login for the demo.
+export function consentHtml(q: URLSearchParams): string {
+  const scope = q.get('scope') ?? '';
+  const items = scope.split(/\s+/).filter(Boolean).map(s => `<li>${s}</li>`).join('') || '<li>basic access</li>';
+  const approve = new URLSearchParams(q); approve.set('approve', '1');
+  const deny = `${q.get('redirect_uri') ?? ''}?error=access_denied&state=${encodeURIComponent(q.get('state') ?? '')}`;
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Authorize</title>
+<style>body{font-family:system-ui,-apple-system,sans-serif;max-width:420px;margin:12vh auto;padding:24px;color:#1d1d1f}
+h1{font-size:20px;margin:0 0 4px}ul{color:#424245;line-height:1.7}.note{color:#86868b;font-size:13px}
+.b{display:inline-block;padding:11px 18px;border-radius:10px;text-decoration:none;font-weight:600;font-size:14px}
+.allow{background:#0071e3;color:#fff}.deny{color:#6e6e73}</style></head><body>
+<h1>${SYSTEM_NAME}</h1><p><b>Brainfeeder</b> wants to connect and access:</p>
+<ul>${items}</ul>
+<p class="note">Read-only, and you can disconnect at any time.</p>
+<p><a class="b allow" href="/api/agent/authorize?${approve.toString()}">Allow</a>
+&nbsp;<a class="b deny" href="${deny}">Deny</a></p></body></html>`;
 }

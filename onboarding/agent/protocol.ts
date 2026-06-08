@@ -20,7 +20,7 @@ export interface Activity {
 }
 export interface AgentCard {
   system_id: string; name: string; protocol_version: string; summary?: string;
-  auth: { type: string; scopes?: string[] };
+  auth: { type: string; authorize_url?: string; token_url?: string; scopes?: string[] };
   capabilities: { name: string; verbs: string[] }[];
   endpoints: { a2a?: string };
 }
