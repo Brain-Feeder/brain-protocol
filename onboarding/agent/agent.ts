@@ -118,6 +118,20 @@ export function redeemCode(code: string, verifier: string): string | null {
   return TOKEN;                                         // the bearer token the hub will use on A2A
 }
 
+// 5) TRUSTED-HUB CONSENT (optional — HUB-CONSENT.md). For a hub you explicitly trust, the user can
+//    approve *inside the hub* and the hub calls this server-to-server to mint a token — no redirect.
+//    Trust is proven by a shared secret you issue to that hub (HUB_GRANT_SECRET), kept server-only.
+//    To enable it, change your card's `auth` to:
+//        auth: { type: 'hub_consent', grant_url: `${origin}/api/agent/grant`, scopes: [...] }
+//    Only do this for hubs you control or have a trust agreement with — never as the open default.
+const HUB_GRANT_SECRET = process.env.HUB_GRANT_SECRET ?? '';
+export function hubGrant(authHeader: string | null, scopesWanted: string[]): { access_token: string; scopes: string[] } | null {
+  const t = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  if (!HUB_GRANT_SECRET || !t || t !== HUB_GRANT_SECRET) return null;   // only a hub holding the shared secret
+  // In a real system you'd mint a per-connection, revocable token here and record which hub holds it.
+  return { access_token: TOKEN, scopes: scopesWanted };
+}
+
 // The consent screen the user is redirected to. A REAL system gates this behind its own login first
 // (so the user is authenticated before approving); the reference skips login for the demo.
 export function consentHtml(q: URLSearchParams): string {

@@ -15,6 +15,7 @@ this kit:
   onboarding/CHECKLIST.md         ← the definition of done
   onboarding/UPGRADING.md         ← already connected on tokens? how to add OAuth without breaking
   onboarding/INTEGRATION-NOTES.md ← exact contracts the Brainfeeder hub sends (redirect, PKCE, token)
+  onboarding/HUB-CONSENT.md       ← trusted hub? let users approve in-app, no redirect (opt-in)
   agent/       ← the code you copy: card + a2a endpoints, wired to your data
 ```
 
