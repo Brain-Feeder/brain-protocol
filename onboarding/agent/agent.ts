@@ -122,17 +122,53 @@ export function redeemCode(code: string, verifier: string): string | null {
 // (so the user is authenticated before approving); the reference skips login for the demo.
 export function consentHtml(q: URLSearchParams): string {
   const scope = q.get('scope') ?? '';
-  const items = scope.split(/\s+/).filter(Boolean).map(s => `<li>${s}</li>`).join('') || '<li>basic access</li>';
+  const client = (q.get('client_id') ?? 'A hub').replace(/[<>&]/g, '');     // who's asking (e.g. "brainfeeder")
+  const hub = client.charAt(0).toUpperCase() + client.slice(1);
+  const items = (scope.split(/\s+/).filter(Boolean).length ? scope.split(/\s+/).filter(Boolean) : ['basic access'])
+    .map(s => `<li><svg viewBox="0 0 24 24" class="ck"><path d="M5 12l4 4 10-10"/></svg><span>${s}</span></li>`).join('');
   const approve = new URLSearchParams(q); approve.set('approve', '1');
   const deny = `${q.get('redirect_uri') ?? ''}?error=access_denied&state=${encodeURIComponent(q.get('state') ?? '')}`;
-  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Authorize</title>
-<style>body{font-family:system-ui,-apple-system,sans-serif;max-width:420px;margin:12vh auto;padding:24px;color:#1d1d1f}
-h1{font-size:20px;margin:0 0 4px}ul{color:#424245;line-height:1.7}.note{color:#86868b;font-size:13px}
-.b{display:inline-block;padding:11px 18px;border-radius:10px;text-decoration:none;font-weight:600;font-size:14px}
-.allow{background:#0071e3;color:#fff}.deny{color:#6e6e73}</style></head><body>
-<h1>${SYSTEM_NAME}</h1><p><b>Brainfeeder</b> wants to connect and access:</p>
-<ul>${items}</ul>
-<p class="note">Read-only, and you can disconnect at any time.</p>
-<p><a class="b allow" href="/api/agent/authorize?${approve.toString()}">Allow</a>
-&nbsp;<a class="b deny" href="${deny}">Deny</a></p></body></html>`;
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Authorize · ${SYSTEM_NAME}</title>
+<style>
+  :root{--ink:#1d1d1f;--ink2:#6e6e73;--line:#ececf0;--accent:#0071e3}
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,sans-serif;color:var(--ink);
+    display:grid;place-items:center;padding:24px;
+    background:radial-gradient(1000px 600px at 15% -10%,#dbe7ff 0,rgba(219,231,255,0) 60%),
+      radial-gradient(900px 600px at 100% 0,#ffe2d6 0,rgba(255,226,214,0) 55%),
+      radial-gradient(900px 700px at 70% 110%,#e6dcff 0,rgba(230,220,255,0) 60%),linear-gradient(180deg,#f4f7fc,#f7f4f1)}
+  .card{width:100%;max-width:400px;background:rgba(255,255,255,.72);backdrop-filter:blur(28px) saturate(1.4);
+    -webkit-backdrop-filter:blur(28px) saturate(1.4);border:1px solid rgba(255,255,255,.7);border-radius:24px;
+    padding:28px 26px;box-shadow:0 1px 2px rgba(0,0,0,.04),0 20px 60px rgba(31,56,100,.16);text-align:center}
+  .meet{display:flex;align-items:center;justify-content:center;gap:0;margin:2px 0 18px}
+  .orb{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:700;font-size:18px;
+    box-shadow:0 4px 14px rgba(0,0,0,.16);z-index:1}
+  .orb.hub{background:radial-gradient(circle at 38% 32%,#d4e6ff,#4a86ff 44%,#1846c4)}
+  .orb.sys{background:radial-gradient(circle at 38% 32%,#cfeede,#46c486 46%,#1f7a4d);margin-left:-8px}
+  .wire{width:46px;height:2px;background:linear-gradient(90deg,#4a86ff,#1f7a4d);position:relative;z-index:0;border-radius:2px}
+  .wire::after{content:"";position:absolute;top:50%;left:50%;width:7px;height:7px;margin:-3.5px;border-radius:50%;
+    background:#fff;box-shadow:0 0 0 2px rgba(74,134,255,.5);animation:run 1.4s linear infinite}
+  @keyframes run{0%{left:6%}100%{left:94%}}
+  h1{font-size:21px;letter-spacing:-.02em;margin:0 0 4px}
+  .sub{color:var(--ink2);font-size:13.5px;margin:0 0 18px;line-height:1.45}
+  ul{list-style:none;padding:0;margin:0 0 18px;text-align:left}
+  li{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--line);border-radius:12px;margin-bottom:7px;
+    font-size:14px;font-weight:500;text-transform:capitalize;background:rgba(255,255,255,.6)}
+  .ck{width:17px;height:17px;flex-shrink:0;fill:none;stroke:#1f7a4d;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+  .note{color:#86868b;font-size:12px;margin:0 0 18px}
+  .b{display:block;width:100%;padding:13px;border-radius:12px;text-decoration:none;font-weight:600;font-size:15px;border:none;cursor:pointer}
+  .allow{background:var(--accent);color:#fff;box-shadow:0 6px 16px rgba(0,113,227,.32)}
+  .allow:hover{background:#0062c4}
+  .deny{background:transparent;color:var(--ink2);margin-top:6px;font-size:13.5px;font-weight:500}
+</style></head><body>
+  <div class="card">
+    <div class="meet"><div class="orb hub">${hub.charAt(0)}</div><div class="wire"></div><div class="orb sys">${SYSTEM_NAME.charAt(0)}</div></div>
+    <h1>Connect to ${SYSTEM_NAME}?</h1>
+    <p class="sub"><b>${hub}</b> wants to connect and read:</p>
+    <ul>${items}</ul>
+    <p class="note">Read-only · you can disconnect at any time and ${SYSTEM_NAME} is forgotten.</p>
+    <a class="b allow" href="/api/agent/authorize?${approve.toString()}">Allow</a>
+    <a class="b deny" href="${deny}">Not now</a>
+  </div>
+</body></html>`;
 }
