@@ -13,7 +13,7 @@ this kit:
   onboarding/ARCHITECTURE.md      ← the AI doctrine to align to
   onboarding/AI-BUILD-PROMPT.md   ← paste into your own AI build session to do it automatically
   onboarding/CHECKLIST.md         ← the definition of done
-  examples/reference-agent/       ← the code you copy: card + a2a endpoints, wired to your data
+  agent/       ← the code you copy: card + a2a endpoints, wired to your data
 ```
 
 Throughout, `<SYSTEM>` is your system's short id (e.g. `acme`), `<SYSTEM NAME>` its display name.
@@ -21,9 +21,9 @@ Throughout, `<SYSTEM>` is your system's short id (e.g. `acme`), `<SYSTEM NAME>` 
 ---
 
 ## STEP 1 — Drop in the two endpoints
-Copy `examples/reference-agent/agent.ts` and the two route files into your server. They expose
-`GET /api/agent/card` and `POST /api/agent/a2a`. (Not Next.js? The handler bodies are plain Web
-Fetch API — port the few lines to your framework.) Install the vocabulary: `npm i @brainfeed/protocol`.
+Copy the whole `agent/` folder into your server: `protocol.ts` (the vocabulary, bundled — no install
+needed), `agent.ts`, and the two route files. They expose `GET /api/agent/card` and
+`POST /api/agent/a2a`. (Not Next.js? The handler bodies are plain Web Fetch API — port the few lines.)
 
 **DONE WHEN:** `GET /api/agent/card` returns JSON, and `POST /api/agent/a2a` with no token → `401`.
 

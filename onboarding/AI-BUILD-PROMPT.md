@@ -1,19 +1,19 @@
 # Paste this into your system's own AI build session
 
 *Open a build session (Claude Code / Cowork) on your repository, make sure this `onboarding/` folder
-and `examples/reference-agent/` are available to it, and paste everything below the line.*
+and `agent/` are available to it, and paste everything below the line.*
 
 ---
 
 You are upgrading **this system** to join the Brain Feeder ecosystem by speaking the Brain Protocol.
-A complete kit is in `onboarding/` and `examples/reference-agent/`. Do the steps in order. After each,
+A complete kit is in `onboarding/` and `agent/`. Do the steps in order. After each,
 state what you did and how you verified it. **Stop at STEP 4 (conformance) and STEP 6 and wait for the
 human** — do not connect to a real hub or change irreversible-action behaviour without a human
 confirming.
 
-**STEP 1 — Endpoints.** Copy `examples/reference-agent/agent.ts` and its two route files into our
-server (suggest a path, match our conventions), fixing import paths. Install `@brainfeed/protocol`.
-Verify: `GET /api/agent/card` returns JSON; `POST /api/agent/a2a` with no token returns 401.
+**STEP 1 — Endpoints.** Copy the whole `agent/` folder (`protocol.ts` is bundled — no install needed)
+into our server (suggest a path, match our conventions), fixing import paths. Verify: `GET
+/api/agent/card` returns JSON; `POST /api/agent/a2a` with no token returns 401.
 
 **STEP 2 — Identity + real data.** Set `SYSTEM_ID` and `SYSTEM_NAME` in `agent.ts`. Replace the four
 sample functions with our real data, mapped onto the four primitives in `ARCHITECTURE.md` §3. Keep the

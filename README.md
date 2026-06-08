@@ -31,7 +31,7 @@ const deal = negotiate(PROTOCOL_VERSION, ['calendar','tasks'], remoteAgentCard);
 A system that lives entirely separate from any hub, run by anyone, becomes connectable in an
 afternoon. Three things make that self-serve:
 
-- **`examples/reference-agent/`** — the smallest complete conformant system: two endpoints
+- **`onboarding/agent/`** — the smallest complete conformant system: two endpoints
   (`GET /api/agent/card`, `POST /api/agent/a2a`). Copy it into your product (any stack — the
   handler bodies are plain Web Fetch API), wire the four methods to your real data, issue a token.
   Its `README.md` is the step-by-step guide.
