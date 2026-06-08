@@ -6,8 +6,8 @@
 // Shapes come from the bundled `protocol.ts` (a mirror of @brainfeed/protocol) so this runs the
 // moment you copy it. Once the package is on your registry, swap to: import … from '@brainfeed/protocol'.
 import { createHash, randomBytes } from 'crypto';
-import type { AgentCard, Activity, Entity } from './protocol';
-import { PROTOCOL_VERSION } from './protocol';
+import type { AgentCard, Activity, Entity, ActivityQuery } from './protocol';
+import { PROTOCOL_VERSION, filterActivities } from './protocol';
 
 // Issue this token to each hub you let read you (here: one static token from the environment).
 // In a real system you'd map a token → tenant and scope it; the shape stays the same.
@@ -30,10 +30,36 @@ export function agentCard(origin: string): AgentCard {
     // OAuth 2.1 "Connect & Allow": the hub sends the user to authorize_url to log in + approve, then
     // exchanges the returned code at token_url for the bearer token used on every A2A call.
     auth: { type: 'oauth2.1', authorize_url: `${origin}/api/agent/authorize`, token_url: `${origin}/api/agent/token`, scopes: ['tasks', 'projects', 'presence'] },
+    // Each capability carries OPTIONAL `describe` — model-readable semantics so a hub's brain learns
+    // how to query this system from the card alone (no bespoke wiring). statuses = the words this
+    // system uses (from the shared vocabulary); query_params = which activities.query filters it
+    // honours; examples = questions it can answer. A minimal card may omit `describe` entirely.
     capabilities: [
-      { name: 'tasks', verbs: ['read', 'query', 'act'] },   // → activities.query + action.execute
-      { name: 'projects', verbs: ['read'] },                 // → entities.query
-      { name: 'presence', verbs: ['query'] },                // → presence.query
+      {
+        name: 'tasks', verbs: ['read', 'query', 'act'],      // → activities.query + action.execute
+        describe: {
+          summary: 'Work items and their status — what is open, in progress, scheduled or done.',
+          statuses: ['open', 'in_progress', 'scheduled', 'done', 'cancelled'],
+          fields: ['title', 'status', 'due_on'],
+          query_params: ['status', 'q', 'since', 'until', 'limit'],
+          examples: ['what is still open?', 'anything due this week?', 'show me items about the board pack'],
+        },
+      },
+      {
+        name: 'projects', verbs: ['read'],                    // → entities.query
+        describe: {
+          summary: 'The clients, accounts and workspaces this system organises work around.',
+          fields: ['name', 'kind'],
+          examples: ['who are the clients?', 'is there a workspace for Acme?'],
+        },
+      },
+      {
+        name: 'presence', verbs: ['query'],                   // → presence.query
+        describe: {
+          summary: 'A short "what needs me right now" glance — availability and what is urgent today.',
+          examples: ['is anyone free this afternoon?', "what's urgent today?"],
+        },
+      },
     ],
     endpoints: { a2a: `${origin}/api/agent/a2a` },
   };
@@ -52,7 +78,9 @@ const soon = (d: number) => new Date(Date.now() + d * 86400000).toISOString().sl
 function myActivities(): Activity[] {
   return [
     { id: uuid(1), type: 'activity', activity_type: 'task', title: 'Board pack to finalise', due_on: soon(2), status: 'open', source: SYSTEM_ID, external_ref: 'job-1' },
-    { id: uuid(2), type: 'activity', activity_type: 'task', title: 'Sponsor renewal call', due_on: soon(5), status: 'open', source: SYSTEM_ID, external_ref: 'job-2' },
+    { id: uuid(2), type: 'activity', activity_type: 'task', title: 'Sponsor renewal call', due_on: soon(5), status: 'in_progress', source: SYSTEM_ID, external_ref: 'job-2' },
+    { id: uuid(3), type: 'activity', activity_type: 'task', title: 'Q3 numbers to the board', due_on: soon(9), status: 'scheduled', source: SYSTEM_ID, external_ref: 'job-3' },
+    { id: uuid(4), type: 'activity', activity_type: 'task', title: 'Onboarding deck signed off', due_on: soon(-3), status: 'done', source: SYSTEM_ID, external_ref: 'job-4' },
   ];
 }
 function myEntities(): Entity[] {
@@ -73,8 +101,18 @@ export function handleA2A(method: string, params: Record<string, unknown>): A2AR
   switch (method) {
     case 'presence.query':
       return { status: 200, body: { result: myPresence() } };
-    case 'activities.query':
-      return { status: 200, body: { result: { activities: myActivities() } } };
+    case 'activities.query': {
+      // Honour the OPTIONAL typed filters (status/since/until/q/limit) declared on the card, so the
+      // hub can ask a precise question. A hub that sends none gets the full list — same as before.
+      const q: ActivityQuery = {
+        status: Array.isArray(params.status) ? (params.status as string[]) : undefined,
+        since: typeof params.since === 'string' ? params.since : undefined,
+        until: typeof params.until === 'string' ? params.until : undefined,
+        q: typeof params.q === 'string' ? params.q : undefined,
+        limit: typeof params.limit === 'number' ? params.limit : undefined,
+      };
+      return { status: 200, body: { result: { activities: filterActivities(myActivities(), q) } } };
+    }
     case 'entities.query':
       return { status: 200, body: { result: { entities: myEntities() } } };
     case 'action.execute': {
