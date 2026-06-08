@@ -27,13 +27,29 @@ if (!r.ok) throw new Error('non-conformant: ' + r.errors!.join('; '));
 const deal = negotiate(PROTOCOL_VERSION, ['calendar','tasks'], remoteAgentCard);
 ```
 
-## Prove conformance
-Implement the `Adapter` interface (`conformance/tck.ts`) for your system and run the kit in CI:
+## Build a connector — make any system connectable
+A system that lives entirely separate from any hub, run by anyone, becomes connectable in an
+afternoon. Three things make that self-serve:
+
+- **`examples/reference-agent/`** — the smallest complete conformant system: two endpoints
+  (`GET /api/agent/card`, `POST /api/agent/a2a`). Copy it into your product (any stack — the
+  handler bodies are plain Web Fetch API), wire the four methods to your real data, issue a token.
+  Its `README.md` is the step-by-step guide.
+- **`npm run conform -- <url> <token>`** — the live conformance runner. Point it at your *deployed*
+  system and it checks, over the wire, that your card is valid and version-compatible, that auth
+  actually rejects, and that every object you return validates against the vocabulary. **PASS =
+  safe to connect.** This is the gate a hub itself runs before trusting your handshake — so passing
+  it locally means you *will* connect.
+- **`npm run tck`** — the in-process self-test (reference adapter PASSES, broken adapter FAILS),
+  for unit-testing an `Adapter` in CI.
+
 ```bash
-npm run tck   # self-test: reference adapter PASSES, broken adapter FAILS
+npm run conform -- https://your-system.example  YOUR_TOKEN   # over the network, against a live URL
+npm run tck                                                   # in-process, in CI
 ```
-Green is your release gate. A system claims "Brain Protocol v0.1 support" only when its adapter
-passes the TCK.
+
+A system claims "Brain Protocol v0.1 support" only when it passes. Green is your release gate —
+and your ticket to connect to any hub in the ecosystem.
 
 ## Versioning (§7–8)
 Semver. Additive = MINOR (safe, forward-compatible: unknown fields/kinds pass through). Breaking

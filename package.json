@@ -9,11 +9,15 @@
     "./tck": "./conformance/tck.ts"
   },
   "scripts": {
-    "tck": "tsx conformance/run.ts"
+    "tck": "tsx conformance/run.ts",
+    "conform": "tsx conformance/conform.ts"
   },
   "dependencies": {
     "zod": "^3.25.76"
   },
   "license": "UNLICENSED",
-  "private": true
+  "private": true,
+  "devDependencies": {
+    "tsx": "^4.22.4"
+  }
 }
