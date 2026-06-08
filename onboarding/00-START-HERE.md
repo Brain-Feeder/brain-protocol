@@ -61,12 +61,15 @@ token, choose what to share and who can see it, connect.
 **DONE WHEN:** your data appears in the hub tagged `<SYSTEM>`, and a live query (e.g. presence) returns
 an answer from your system.
 
-## STEP 6 — Align the AI architecture
-Work through `ARCHITECTURE.md` (seven principles). If your system has an AI layer, this is alignment;
-if not, it's the recommended pattern. Flag anywhere you diverge — especially any path where the AI can
-take an irreversible action without a human confirming.
+## STEP 6 — Align the AI architecture (OPTIONAL)
+**Only if your system has, or is deliberately adding, a user-facing assistant.** A data-only system
+that just feeds information back and forth is already a complete peer after STEP 5 — you are done; do
+**not** build a master agent to connect. If you *do* have a conversational assistant, work through
+`ARCHITECTURE.md` to align **that** assistant (never a second one) — especially the draft-and-confirm
+gate, so it can't take an irreversible action without a human.
 
-**DONE WHEN:** `CHECKLIST.md` is fully ticked.
+**DONE WHEN:** the protocol section of `CHECKLIST.md` is ticked (and, if you have an assistant, the
+architecture section too).
 
 ---
 

@@ -29,11 +29,14 @@ the human confirms green.
 
 **STEP 5 — (human connects from a hub).**
 
-**STEP 6 — Architecture alignment (GATE — propose, don't apply).** Read `ARCHITECTURE.md`. Audit our
-system against all seven principles and produce a short report: for each, do we comply, and if not, the
-exact change. **Treat principle 2 (draft-and-confirm gate) as critical** — if our AI can take
-irreversible actions without a human yes, flag it loudly. Propose changes and wait for the human before
-applying any.
+**STEP 6 — Architecture alignment (OPTIONAL; GATE — propose, don't apply).** First decide whether this
+applies: **does our system have a user-facing assistant a human talks to?** If NO — we are a data-only
+system — then **do not build a master agent**; report that Part B doesn't apply and stop. We are
+already a complete peer. If YES, read `ARCHITECTURE.md` and audit our *existing* assistant against the
+seven principles (align it — never create a second assistant). Produce a short report: for each, do we
+comply, and if not, the exact change. **Treat principle 2 (draft-and-confirm gate) as critical** — if
+our assistant can take irreversible actions without a human yes, flag it loudly. Propose changes and
+wait for the human before applying any.
 
 Constraints: never weaken the confirm gate; never expose secrets in the agent card; keep the four
 primitives — do not invent a fifth; depend on `@brainfeed/protocol`, do not redefine the shapes.

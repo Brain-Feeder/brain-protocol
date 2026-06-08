@@ -1,8 +1,16 @@
-# The shared AI architecture (STEP 6)
+# The shared AI architecture (STEP 6) — OPTIONAL
 
-Conformance (STEP 1–5) lets your system *connect*. This is what makes it the *same species of system*
-— safe, predictable, and federating cleanly. For each principle: confirm your system matches it; where
-it diverges, change it. (If your system has no AI layer yet, this is the pattern to build toward.)
+**Read this first: this section only applies if your system has — or is deliberately adding — a
+user-facing assistant a human talks to.** A *data-only* system (a "pipe" that just feeds information
+back and forth over the two endpoints) is already a complete, first-class peer after STEP 5. It does
+**not** need a master agent, and you should **not** build one just to connect. Skip to the checklist.
+
+The word "agent" in the protocol (agent card, agent-to-agent) means a *machine interface*, not a
+chatbot. Conformance needs no AI at all.
+
+If your system *does* have a conversational assistant, this is the doctrine to align **that existing
+assistant** to — an evolution of the one you have, never a second one. For each principle: confirm
+your assistant matches it; where it diverges, change it.
 
 ### 1. One named orchestrator (the Director)
 The user talks to exactly **one** assistant, with a name and one voice. Specialist sub-agents run
