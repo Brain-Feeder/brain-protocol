@@ -8,13 +8,12 @@ the spec; you pass the conformance runner; you connect.
 
 The whole surface is **two endpoints**.
 
-## 1. Install the vocabulary
+## 1. The vocabulary
 
-```bash
-npm i @brainfeed/protocol
-```
-
-Never re-implement the shapes — depend on the package so you can't drift from the standard.
+The shapes are **bundled** as `protocol.ts` so this runs the moment you copy it — no install needed.
+It's a faithful mirror of the canonical package; once `@brainfeed/protocol` is on your registry, swap
+`./protocol` for `@brainfeed/protocol` in `agent.ts`. Either way, don't re-implement the shapes — the
+conformance runner validates against the real package, so any drift is caught at the gate.
 
 ## 2. Expose two endpoints
 

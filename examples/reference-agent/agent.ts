@@ -3,9 +3,10 @@
 // Protocol hub. It passes `npm run conform -- <your-url> <token>`. Nothing here is Brainfeeder-
 // specific: a hub discovers your card, negotiates the version, and asks the A2A methods below.
 //
-// Depend on the canonical package — never re-implement the shapes:  npm i @brainfeed/protocol
-import type { AgentCard, Activity, Entity } from '@brainfeed/protocol';
-import { PROTOCOL_VERSION } from '@brainfeed/protocol';
+// Shapes come from the bundled `protocol.ts` (a mirror of @brainfeed/protocol) so this runs the
+// moment you copy it. Once the package is on your registry, swap to: import … from '@brainfeed/protocol'.
+import type { AgentCard, Activity, Entity } from './protocol';
+import { PROTOCOL_VERSION } from './protocol';
 
 // Issue this token to each hub you let read you (here: one static token from the environment).
 // In a real system you'd map a token → tenant and scope it; the shape stays the same.
