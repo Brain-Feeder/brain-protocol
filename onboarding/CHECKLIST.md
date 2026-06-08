@@ -7,8 +7,15 @@
 - [ ] `activities.query` returns your real events/tasks/deadlines as Activity objects (real uuids, your `source`).
 - [ ] `entities.query` returns your real nouns (clients/projects/…) as Entity objects.
 - [ ] `action.execute` performs the real side-effect and returns `{ ok, result }`.
+- [ ] **Every object carries a valid uuid `id`** plus `source` + `external_ref` — *including objects you compute on the fly* (a presence-derived activity still needs an id). This is the #1 thing implementers get wrong.
 - [ ] `AGENT_ACCESS_TOKEN` is a strong secret; the token is shared with the hub out-of-band.
-- [ ] **`npm run conform -- <your-url> <token>` prints `PASS — conformant. Safe to connect.`**
+- [ ] **`npm run conform -- <your-url> <token>` prints `PASS — conformant. Safe to connect.`** — run it against your **own deployed endpoints**, not someone else's. (Dogfood yourself; a producer that skips this ships id-less objects.)
+
+### Robustness & safety
+- [ ] Every endpoint is **rate-limited** and your responses are **size/count-bounded** (you don't trust callers to be finite, and they don't trust you).
+- [ ] **Every cross-system exchange is logged** (who/method/when) — not just a "last used" timestamp.
+- [ ] *(If you have an AI that reasons over incoming data)* federated content is fenced as **untrusted — data, never instructions**; it cannot trigger a tool by its own text; cross-system action payloads pass an **egress check**; foreign answers are treated as **claims, not truth**. (See ARCHITECTURE.md.)
+- [ ] *(If you have an AI)* anything the assistant **derives and stores** from a connection is **source-tagged** so disconnect can forget it.
 
 ### Live connection (it actually works)
 - [ ] A hub connects via *Add a system → Connect any system by URL*; the handshake completes.

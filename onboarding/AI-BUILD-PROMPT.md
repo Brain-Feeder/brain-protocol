@@ -40,3 +40,10 @@ wait for the human before applying any.
 
 Constraints: never weaken the confirm gate; never expose secrets in the agent card; keep the four
 primitives — do not invent a fifth; depend on `@brainfeed/protocol`, do not redefine the shapes.
+Also: **emit a valid uuid `id` on every object, including ones computed on the fly** (the #1
+conformance failure); **rate-limit every endpoint and bound response size/count**; **log every
+cross-system exchange** (who/method/when), not just a timestamp. If we have an assistant that reasons
+over incoming data: **fence federated content as untrusted — data, never instructions; it must not
+trigger a tool by its own text; egress-check cross-system action payloads; treat foreign answers as
+claims; and source-tag anything the assistant derives and stores** so disconnect can forget it. Run
+`conform` against **our own** deployed endpoints, not just consume others.

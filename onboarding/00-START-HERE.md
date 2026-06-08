@@ -48,10 +48,13 @@ start; per-hub tokens later.)
 returns `200` with a summary.
 
 ## STEP 4 — Prove conformance (the gate)
-From the `brain-protocol` repo, against your **deployed** URL:
+From the `brain-protocol` repo, against **your own deployed** URL — dogfood yourself, don't assume:
 ```
 npm run conform -- https://your-system.example  THE_TOKEN
 ```
+The most common failure is **id-less objects**: every activity/entity you return needs a real uuid
+`id`, even ones you compute on the fly. The runner catches it — that's the point.
+
 **DONE WHEN:** it prints `PASS — conformant. Safe to connect.` Fix any `XX` line first; don't skip this.
 
 ## STEP 5 — Connect from a hub
