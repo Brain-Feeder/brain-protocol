@@ -48,12 +48,22 @@ start; per-hub tokens later.)
 returns `200` with a summary.
 
 ## STEP 4 — Prove conformance (the gate)
-From the `brain-protocol` repo, against **your own deployed** URL — dogfood yourself, don't assume:
+From the **kit root** (the folder that holds `package.json` and `conformance/` — a sibling of
+`onboarding/`), against **your own deployed** URL — dogfood yourself, don't assume:
 ```
+npm install                                          # on the SAME machine you'll run conform from
 npm run conform -- https://your-system.example  THE_TOKEN
 ```
-The most common failure is **id-less objects**: every activity/entity you return needs a real uuid
-`id`, even ones you compute on the fly. The runner catches it — that's the point.
+> **Run `npm install` here, on the machine you run conform from — never copy `node_modules` between
+> machines.** The runner uses `tsx`/esbuild, which ships native per-platform binaries; a
+> `node_modules` built on Linux won't run on a Mac. If you hit an `@esbuild/<platform>` error, delete
+> `node_modules` + `package-lock.json` and re-run `npm install`.
+
+Reading the output:
+- **"could not reach <url> — NOT a protocol failure"** → a URL/DNS/deploy problem, not the protocol.
+  Fix the address or wait for the deploy; nothing was tested.
+- The most common *real* failure is **id-less objects**: every activity/entity needs a real uuid
+  `id`, even ones you compute on the fly. The runner catches it — that's the point.
 
 **DONE WHEN:** it prints `PASS — conformant. Safe to connect.` Fix any `XX` line first; don't skip this.
 

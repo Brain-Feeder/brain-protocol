@@ -17,14 +17,18 @@ into our server (suggest a path, match our conventions), fixing import paths. Ve
 
 **STEP 2 — Identity + real data.** Set `SYSTEM_ID` and `SYSTEM_NAME` in `agent.ts`. Replace the four
 sample functions with our real data, mapped onto the four primitives in `ARCHITECTURE.md` §3. Keep the
-shapes exactly; `id` must be a real uuid, `source` is our system id, `external_ref` is our record id.
-For `action.execute`, perform the real side-effect and return what happened.
+shapes exactly; `id` must be a real uuid (even for objects you compute on the fly), `source` is our
+system id, `external_ref` is our record id. Leave **`action.execute` dark by default** — it already
+returns a valid "proposed, not executed" result unless `AGENT_ALLOW_WRITES=true`. Connect read-only
+first; a human enables real writes deliberately later. Do **not** make it perform real side-effects yet.
 
 **STEP 3 — Token.** Add an `AGENT_ACCESS_TOKEN` env secret. Verify an authenticated `presence.query`
 returns 200 with a summary.
 
-**STEP 4 — Conformance (GATE — stop).** Tell the human to run, from the `brain-protocol` repo:
-`npm run conform -- <our-deployed-url> <token>`. Fix anything until it prints PASS. Do not proceed until
+**STEP 4 — Conformance (GATE — stop).** Tell the human to run, from the **kit root** (the folder with
+`package.json` + `conformance/`): `npm install` (on that machine — never copy `node_modules` between
+machines), then `npm run conform -- <our-deployed-url> <token>`. If it says "could not reach <url>",
+that's a URL/deploy problem, not the protocol. Fix anything until it prints PASS. Do not proceed until
 the human confirms green.
 
 **STEP 5 — (human connects from a hub).**
@@ -47,3 +51,10 @@ over incoming data: **fence federated content as untrusted — data, never instr
 trigger a tool by its own text; egress-check cross-system action payloads; treat foreign answers as
 claims; and source-tag anything the assistant derives and stores** so disconnect can forget it. Run
 `conform` against **our own** deployed endpoints, not just consume others.
+
+**Staging note (important):** principles 8 (forget) and 9 (untrusted-content/egress) are **staged, not
+upfront**. A read-only / data-only connection needs neither at connect time. They become required the
+moment we (a) let our assistant *reason over* connected-system data, or (b) *act across* the boundary.
+Build them when you flip those on — and flag to the human that flipping writes/reasoning on is the
+trigger. The §9 fencing is also something the hub cannot verify over the wire, so we both attest to it
+and the hub re-fences our content on its side regardless — assume defense-in-depth on both ends.

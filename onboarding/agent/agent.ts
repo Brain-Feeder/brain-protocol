@@ -11,6 +11,11 @@ import { PROTOCOL_VERSION } from './protocol';
 // Issue this token to each hub you let read you (here: one static token from the environment).
 // In a real system you'd map a token → tenant and scope it; the shape stays the same.
 const TOKEN = process.env.AGENT_ACCESS_TOKEN ?? 'dev-reference-token';
+// Recommended safe posture: action.execute is CONFORMANT BUT DARK BY DEFAULT. It returns a valid
+// "proposed, not executed" result so you pass conformance and connect read-only first; real side
+// effects only happen once a human sets AGENT_ALLOW_WRITES=true after reviewing. Connect, prove
+// yourself, THEN enable writes deliberately.
+const ALLOW_WRITES = process.env.AGENT_ALLOW_WRITES === 'true';
 const SYSTEM_ID = process.env.AGENT_SYSTEM_ID ?? 'reference';
 const SYSTEM_NAME = process.env.AGENT_SYSTEM_NAME ?? 'Reference System';
 
@@ -71,8 +76,12 @@ export function handleA2A(method: string, params: Record<string, unknown>): A2AR
       return { status: 200, body: { result: { entities: myEntities() } } };
     case 'action.execute': {
       const a = (params.action ?? {}) as { summary?: string };
-      // perform the real side effect in your system here, then return what happened:
-      return { status: 200, body: { result: { ok: true, result: `Done in ${SYSTEM_NAME}: ${a.summary ?? 'action'}` } } };
+      if (!ALLOW_WRITES) {
+        // dark by default: valid response, NO side effect — passes conformance, stays safe
+        return { status: 200, body: { result: { ok: true, executed: false, result: `Proposed, not executed (writes disabled): ${a.summary ?? 'action'}` } } };
+      }
+      // writes enabled by a human → perform the real side effect in your system here, then report:
+      return { status: 200, body: { result: { ok: true, executed: true, result: `Done in ${SYSTEM_NAME}: ${a.summary ?? 'action'}` } } };
     }
     case 'connection.revoke':
       // a hub is disconnecting and asking you to forget it: invalidate the token you issued it and

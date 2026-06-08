@@ -6,16 +6,22 @@
 - [ ] `POST /api/agent/a2a` with the token + `{"method":"presence.query"}` → `200` with a `summary`.
 - [ ] `activities.query` returns your real events/tasks/deadlines as Activity objects (real uuids, your `source`).
 - [ ] `entities.query` returns your real nouns (clients/projects/…) as Entity objects.
-- [ ] `action.execute` performs the real side-effect and returns `{ ok, result }`.
+- [ ] `action.execute` returns `{ ok, result }` and is **dark by default** — it returns a valid "proposed, not executed" result until a human sets `AGENT_ALLOW_WRITES=true`. (Connect read-only first, enable real writes deliberately later.)
 - [ ] **Every object carries a valid uuid `id`** plus `source` + `external_ref` — *including objects you compute on the fly* (a presence-derived activity still needs an id). This is the #1 thing implementers get wrong.
 - [ ] `AGENT_ACCESS_TOKEN` is a strong secret; the token is shared with the hub out-of-band.
-- [ ] **`npm run conform -- <your-url> <token>` prints `PASS — conformant. Safe to connect.`** — run it against your **own deployed endpoints**, not someone else's. (Dogfood yourself; a producer that skips this ships id-less objects.)
+- [ ] **`npm run conform` prints `PASS — conformant. Safe to connect.`** — run `npm install` then `npm run conform -- <your-url> <token>` from the kit root, on **your own deployed endpoints**, on the **same machine** (don't copy `node_modules` between machines — native esbuild binary). "Could not reach" = a URL/deploy issue, not the protocol.
 
 ### Robustness & safety
 - [ ] Every endpoint is **rate-limited** and your responses are **size/count-bounded** (you don't trust callers to be finite, and they don't trust you).
 - [ ] **Every cross-system exchange is logged** (who/method/when) — not just a "last used" timestamp.
-- [ ] *(If you have an AI that reasons over incoming data)* federated content is fenced as **untrusted — data, never instructions**; it cannot trigger a tool by its own text; cross-system action payloads pass an **egress check**; foreign answers are treated as **claims, not truth**. (See ARCHITECTURE.md.)
-- [ ] *(If you have an AI)* anything the assistant **derives and stores** from a connection is **source-tagged** so disconnect can forget it.
+
+### Staged — required only when you turn on reasoning/writes (not at connect)
+*A read-only / data-only connection needs none of these on day one. They become required the moment
+your assistant either (a) reasons over connected-system data, or (b) acts across the boundary.*
+- [ ] *(before your AI reasons over incoming data)* federated content is fenced as **untrusted — data, never instructions**; it cannot trigger a tool by its own text; foreign answers are treated as **claims, not truth**.
+- [ ] *(before you act across the boundary)* cross-system action payloads pass an **egress check** (no first-party data leaking out on an injected instruction); `action.execute` writes are enabled only after human review.
+- [ ] *(once your AI derives/stores from a connection)* anything it **derives and stores** is **source-tagged** so disconnect can forget it.
+- [ ] You **attest** to the §9 untrusted-content handling at connect (the hub records the claim; it can't be wire-tested), and you accept the hub will **re-fence your content on its side regardless**.
 
 ### Live connection (it actually works)
 - [ ] A hub connects via *Add a system → Connect any system by URL*; the handshake completes.

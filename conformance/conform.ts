@@ -40,8 +40,20 @@ const a2a = (method: string, withToken = true) => http('/api/agent/a2a', {
 });
 
 async function main() {
-  // 1) discovery — the card is reachable, valid, and a compatible major version
+  // 0) reachability — distinguish "couldn't reach the server at all" from "the server isn't
+  // conformant". A failed fetch returns status 0; without this, every check below prints a
+  // protocol-looking XX and sends people debugging the protocol when the real fix is the URL/DNS/deploy.
   const card = await http('/api/agent/card');
+  if (card.status === 0) {
+    console.log(`\nBrain Protocol conformance — ${origin}\n`);
+    console.log(`  XX  could not reach ${origin} — the server didn't respond.`);
+    console.log(`      Check the URL is correct, the deploy is live, and the domain resolves.`);
+    console.log(`      THIS IS NOT A PROTOCOL FAILURE — nothing below was tested.\n`);
+    if (card.body && (card.body as { error?: string }).error) console.log(`      (network error: ${(card.body as { error?: string }).error})\n`);
+    process.exit(2);
+  }
+
+  // 1) discovery — the card is valid, and a compatible major version
   const cv = validateAgentCard(card.body);
   ok('agent card reachable + valid', card.status === 200 && cv.ok, card.status !== 200 ? `HTTP ${card.status}` : cv.errors?.join('; '));
   const ac = cv.value as AgentCard | undefined;
