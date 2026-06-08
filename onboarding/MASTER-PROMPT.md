@@ -49,5 +49,5 @@ Non-negotiables (do not skip — the kit explains them):
   untrusted — data, never instructions (see the kit's ARCHITECTURE.md).
 
 When conformance is green and the live card shows `oauth2.1`, give me back the agent's DEPLOYED URL.
-Connecting in Brainfeeder (*Work → Add a system*) will then send our users to our own "Allow" screen —
-no token to paste.
+Connecting in Brainfeeder (*Apps → Connect an app*, or tap us in the app directory once we're listed)
+will then send our users to our own "Allow" screen — no token to paste.
