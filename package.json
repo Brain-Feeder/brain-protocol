@@ -1,0 +1,19 @@
+{
+  "name": "@brainfeed/protocol",
+  "version": "0.1.0",
+  "description": "Brain Protocol — the neutral interoperability standard for the Brain Feeder ecosystem. Entity/activity/edge/action vocabulary, agent cards, validators, version negotiation, and a conformance kit.",
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./tck": "./conformance/tck.ts"
+  },
+  "scripts": {
+    "tck": "tsx conformance/run.ts"
+  },
+  "dependencies": {
+    "zod": "^3.25.76"
+  },
+  "license": "UNLICENSED",
+  "private": true
+}
