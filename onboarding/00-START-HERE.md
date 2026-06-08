@@ -75,8 +75,9 @@ Reading the output:
 **DONE WHEN:** it prints `PASS — conformant. Safe to connect.` Fix any `XX` line first; don't skip this.
 
 ## STEP 5 — Connect from a hub
-In the hub (in Brainfeeder: *Work → Add a system → Connect any system by URL*), paste your URL + the
-token, choose what to share and who can see it, connect.
+In the hub (in Brainfeeder: *Work → Add a system*), paste your URL and choose who can see it. Because
+your card advertises OAuth, the hub sends the user to **your** "Allow" screen to approve — no token to
+copy. (If a system only speaks the older token auth, the hub falls back to asking for the token.)
 
 **DONE WHEN:** your data appears in the hub tagged `<SYSTEM>`, and a live query (e.g. presence) returns
 an answer from your system.
