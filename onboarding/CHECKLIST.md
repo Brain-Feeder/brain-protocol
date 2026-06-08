@@ -17,6 +17,12 @@
 - [ ] A confirmed cross-system action actually runs in your system.
 - [ ] Disconnect removes every row sourced from your system cleanly.
 
+### Disconnection & forgetting (see ARCHITECTURE.md §8)
+- [ ] `connection.revoke` is handled — a disconnecting hub can tell you to drop its token.
+- [ ] Revoking the token you issued a hub causes its calls to 401 (the system-end "forget me").
+- [ ] When you are a hub: on disconnect you erase the system's resident data **and** derived memory by default; an actions-only audit is kept only if the user opts in.
+- [ ] Memory/action rows are tagged with their source so they can be forgotten precisely.
+
 ### Architecture (your system is a true peer — see ARCHITECTURE.md)
 - [ ] One named orchestrator is the only assistant the user talks to; sub-agents never surface.
 - [ ] Irreversible actions (pay/book/send/renew/switch/invoice) require a human confirm. **(critical)**

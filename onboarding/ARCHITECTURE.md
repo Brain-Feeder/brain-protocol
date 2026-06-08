@@ -45,8 +45,20 @@ When the assistant needs another system, it **asks that system's agent** (presen
 than scraping or copying, and proposes any cross-system action into the same confirm gate. This is
 exactly the contract STEP 1 exposes — your system is on both ends of it.
 
+### 8. Disconnection means forgetting (both ends)
+Connecting is reversible from both ends, and disconnecting erases. Build for it from the start:
+- **Tag provenance at write time.** Whenever your assistant stores something learned from, or an
+  action taken in, a connected system, stamp it with that connection's source — otherwise you can't
+  cleanly forget it later (a fact distilled into free text loses its origin).
+- **Hub disconnects you:** expect (and, as a hub, perform) erasure of the system's resident data
+  *and* the derived memory about it — everything by default; an actions-only audit only if the user
+  opts in. Implement `connection.revoke` so a disconnecting hub can tell you to drop its token.
+- **You disconnect a hub:** revoke the token you issued it. Its calls then fail and it must forget
+  you. Revocation is the system-end "forget me" — no special endpoint required.
+- **Prefer live queries** (presence) over sync where you can: nothing stored is nothing to forget.
+
 ---
 
-**The through-line:** the graph (§3) makes federation cheap, the confirm gate (§2) makes it safe, and
-the single orchestrator (§1) makes it feel like one assistant rather than a swarm. Those three are
-non-negotiable; the rest is how to do them well.
+**The through-line:** the graph (§3) makes federation cheap, the confirm gate (§2) makes it safe, the
+single orchestrator (§1) makes it feel like one assistant rather than a swarm, and forgetting on
+disconnect (§8) makes it trustworthy. Those are the non-negotiables; the rest is how to do them well.

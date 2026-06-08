@@ -74,6 +74,11 @@ export function handleA2A(method: string, params: Record<string, unknown>): A2AR
       // perform the real side effect in your system here, then return what happened:
       return { status: 200, body: { result: { ok: true, result: `Done in ${SYSTEM_NAME}: ${a.summary ?? 'action'}` } } };
     }
+    case 'connection.revoke':
+      // a hub is disconnecting and asking you to forget it: invalidate the token you issued it and
+      // drop any hub-specific state. (Stub: nothing persisted here.) The reciprocal also holds — if
+      // YOU revoke the token a hub holds, its calls will 401 and it must forget your data.
+      return { status: 200, body: { result: { ok: true } } };
     default:
       return { status: 400, body: { error: `unknown method '${method}'` } };
   }
