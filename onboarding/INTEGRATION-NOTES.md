@@ -5,16 +5,28 @@ hub uses, so you can match and lock down your side. All of it is derived from th
 (`app/lib/server/oauth.ts` + `app/app/api/systems/oauth/*`). Nothing here changes the protocol — it's
 the concrete shape of the kit's OAuth flow.
 
-## 1. Redirect / callback URL (allow-list this)
+## 1. Redirect / callback URL (allow-list these)
+The **path is always** `/api/systems/oauth/callback`. The **host is derived at runtime from whichever
+Brainfeeder deployment the user is on when they connect** — so the same hub will send different
+`redirect_uri` values from production vs. staging vs. a preview build. Allow-list the **full set**, not
+just production:
+
 ```
-https://brainfeeder.ai/api/systems/oauth/callback
+https://brainfeeder.ai/api/systems/oauth/callback          ← canonical PRODUCTION (real connections)
+https://dev.brainfeeder.ai/api/systems/oauth/callback       ← staging
+https://brainfeeder.vercel.app/api/systems/oauth/callback   ← raw Vercel deploy domain (preview/testing)
 ```
-- The **path is fixed**: `/api/systems/oauth/callback`.
-- The **host** is whatever Brainfeeder deployment the user is on when they connect (production =
-  `brainfeeder.ai`; staging = `dev.brainfeeder.ai`). The hub derives `redirect_uri` from that host and
-  sends it **both** in the authorize redirect **and** in the token exchange.
-- Validating that the incoming `redirect_uri` exactly matches an allow-listed value is the correct,
-  recommended behaviour. Allow-list the production URL above (and the staging one if you'll test there).
+
+- **`brainfeeder.ai` is canonical production** — real end-user connections originate there. The other
+  two are for testing; keep them allow-listed but treat `brainfeeder.ai` as primary.
+- The hub sends `redirect_uri` **both** in the authorize redirect **and** again in the token exchange;
+  they're identical, so one allow-list entry covers both.
+- Match **character-for-character**: scheme, host, path, no trailing slash.
+
+> **Troubleshooting `invalid/unregistered redirect_uri`:** this means the host the user connected from
+> isn't on your allow-list. Don't guess — read the actual `redirect_uri` query param on the authorize
+> request that failed and allow-list **that exact host** (it's almost always a preview/staging domain
+> like `*.vercel.app` you hadn't listed). This is the single most common first-connect snag.
 
 ## 2. Authorize request (what the hub sends the user to)
 `GET <your authorize_url>?` with query params:
