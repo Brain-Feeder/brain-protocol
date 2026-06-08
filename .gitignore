@@ -1,3 +1,4 @@
 node_modules/
 package-lock.json
 *.tsbuildinfo
+.DS_Store
