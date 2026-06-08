@@ -13,6 +13,8 @@ this kit:
   onboarding/ARCHITECTURE.md      ← the AI doctrine to align to
   onboarding/AI-BUILD-PROMPT.md   ← paste into your own AI build session to do it automatically
   onboarding/CHECKLIST.md         ← the definition of done
+  onboarding/UPGRADING.md         ← already connected on tokens? how to add OAuth without breaking
+  onboarding/INTEGRATION-NOTES.md ← exact contracts the Brainfeeder hub sends (redirect, PKCE, token)
   agent/       ← the code you copy: card + a2a endpoints, wired to your data
 ```
 
