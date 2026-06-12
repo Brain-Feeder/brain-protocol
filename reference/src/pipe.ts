@@ -423,6 +423,34 @@ export class Pipe {
   }
 
   // -------------------------------------------------------------------------
+  // Staged atomic resync (BP-04 §3.3.3): stage in a transaction, swap in one commit. A resync
+  // killed before the commit leaves prior state byte-intact — the read model never blanks.
+  // -------------------------------------------------------------------------
+  async stagedResync(records: Record_[], connection: string, crashBeforeSwap: boolean): Promise<{ swapped: boolean }> {
+    await this.c.query('begin');
+    try {
+      for (const rec of records) {
+        const reasons = validateRecord(rec);
+        if (reasons.length) { await this.c.query('rollback'); throw new Error('staged record invalid: ' + reasons[0]); }
+        await this.insert(rec, connection);
+      }
+      if (crashBeforeSwap) { await this.c.query('rollback'); return { swapped: false }; }
+      await this.c.query('commit');
+      return { swapped: true };
+    } catch (e) {
+      try { await this.c.query('rollback'); } catch { /* */ }
+      throw e;
+    }
+  }
+
+  /** A narrow computed live-query answer (BP-04 §3.1): presence, never underlying diary rows. */
+  async presence(member: string): Promise<{ available: boolean; eta: string | null }> {
+    // Computed from recent activities under the member lens — only the narrowest answer leaves.
+    const rows = await this.query({ id: member, role: 'adult' }, { type: 'activity' });
+    return { available: rows.length === 0, eta: rows.length ? '19:00' : null };
+  }
+
+  // -------------------------------------------------------------------------
   // The Class D human gate (BP-08 §2): server-side recorded, payload-hash-bound, idempotent.
   // A client claim of "confirmed" is nothing — only a stored confirm permits execution.
   // -------------------------------------------------------------------------

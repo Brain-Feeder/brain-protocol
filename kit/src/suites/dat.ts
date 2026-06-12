@@ -5,7 +5,7 @@
 
 import { defineTest, type TestContext } from '../harness.js';
 import type { Adapter, BrainRecord, MemberRef } from '../types.js';
-import { validPerson, validActivity, validEdge, validAction, urn, resetUuids } from '../fixtures/records.js';
+import { validPerson, validActivity, validEdge, validAction, urn, randUrn, resetUuids } from '../fixtures/records.js';
 import { validateForgetReceipt } from '../validate.js';
 import { WireClient } from '../peer/wire.js';
 
@@ -192,7 +192,7 @@ defineTest({
     ] });
     // Seed 600 rows owned by the member lens, then request a page over the 500 cap.
     const batch: BrainRecord[] = [];
-    for (let i = 0; i < 600; i++) batch.push(validPerson({ id: urn('garagebrain', 'entity'), external_ref: `bulk/${i}`, owner: 'mem-a' }));
+    for (let i = 0; i < 600; i++) batch.push(validPerson({ id: randUrn('garagebrain', 'entity'), external_ref: `bulk/${i}`, owner: 'mem-a' }));
     const ing = await w.call('records.ingest', { records: batch });
     ctx.note('bulk ingest', { status: ing.status, accepted: ing.body?.body?.accepted });
     const page = await w.call('calendar.read', { limit: 1000 });

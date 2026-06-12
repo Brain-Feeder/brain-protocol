@@ -4,7 +4,7 @@
 
 import { defineTest, type TestContext } from '../harness.js';
 import { WireClient } from '../peer/wire.js';
-import { urn, resetUuids, validPerson } from '../fixtures/records.js';
+import { randUrn as urn, resetUuids, validPerson } from '../fixtures/records.js';
 
 function wire(ctx: TestContext): WireClient {
   if (!ctx.target) ctx.skip('SEC needs --target (the wire surface)');

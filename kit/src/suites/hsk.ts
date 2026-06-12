@@ -81,12 +81,24 @@ defineTest({
   },
 });
 
-// T-HSK-04 — negotiation downgrade (v0.1). Not yet implemented at the wire (v0.1 peer profile).
+// T-HSK-04 — negotiation downgrade (AC-03.4): a v2 and a v0.1 peer converse at v0.1, S2 inert.
 defineTest({
   id: 'T-HSK-04', suite: 'HSK', cls: 'D', needs: 'wire',
   name: 'negotiation downgrade', clause: 'BP-03 §3.2 / AC-03.4',
   async run(ctx) {
-    ctx.skip('v0.1 fallback peer profile not yet built (Wave C remainder)');
+    const w = wire(ctx);
+    const neg = await w.post('/test/negotiate', { peerVersions: ['0.1'] });
+    ctx.note('negotiated version', neg.body);
+    ctx.check(neg.body?.version === '0.1', 'BP-03 §3.1', 'a v2 and a v0.1 peer must converse at the highest common version (0.1)');
+    // An S2 grant cell over the v0.1 connection must be refused at issue (BP-03 §3.2(c)).
+    const s2overV01 = await w.post('/test/grant', {
+      grant_id: 'urn:brain:brain-tck-peer:grant:v01s2', grantee: 'brain-tck-peer', member_lens: 'mem-a',
+      protocol_version: '0.1', matrix: [{ capability: 'health_record.summary', direction: 'offer', mode: 'read', sensitivity_ceiling: 'S2' }],
+      granteePublicJwk: { kty: 'OKP', crv: 'Ed25519', x: 'AAAA' },
+    });
+    ctx.note('S2 over v0.1', s2overV01.body);
+    ctx.check(s2overV01.body?.installed === false && s2overV01.body?.reason === 's2_requires_v2', 'BP-03 §3.2(c)',
+      'an S2 grant cell over a v0.1 connection must be refused — v2 features stay inert');
   },
 });
 

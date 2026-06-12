@@ -17,6 +17,12 @@ export function urn(system: string, rtype: string, uuid = fixedUuid()): string {
   return `urn:brain:${system}:${rtype}:${uuid}`;
 }
 
+// A genuinely unique urn for wire tests, which share a server DB that is never reset between
+// tests — deterministic ids would collide on the primary key. Uses a random UUID.
+export function randUrn(system: string, rtype: string): string {
+  return `urn:brain:${system}:${rtype}:${crypto.randomUUID()}`;
+}
+
 const T_VALID = '2026-06-11T09:10:00Z';
 const T_SYS = '2026-06-11T09:12:00Z';
 

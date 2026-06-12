@@ -146,9 +146,20 @@ export async function startServer(opts: { port?: number } = {}): Promise<ServerH
         return send(res, 200, { fetched: r.ok, reason: r.reason });
       }
 
+      // Test: version negotiation (BP-03 §3.1-§3.2). Operate at the highest common version.
+      if (req.method === 'POST' && path === '/test/negotiate') {
+        const { peerVersions } = await readBody(req);
+        const mine = ['2.0', '0.1'];
+        const common = (peerVersions ?? []).filter((v: string) => mine.includes(v)).sort().reverse();
+        return send(res, 200, { version: common[0] ?? null });
+      }
+
       // Test: install a grant out of band (BUILD-BRIEF §6.3 — pre-pin the peer's grant key).
       if (req.method === 'POST' && path === '/test/grant') {
         const g = await readBody(req);
+        // No S2 over a v0.1 connection (BP-03 §3.2(c)): S2 requires the v2 elevated grant + JWE.
+        if (g.protocol_version === '0.1' && (g.matrix ?? []).some((c: MatrixCell) => c.sensitivity_ceiling === 'S2'))
+          return send(res, 200, { installed: false, reason: 's2_requires_v2' });
         grants.set(g.grant_id, {
           grant_id: g.grant_id, grantee: g.grantee, member_lens: g.member_lens,
           visibility_ceiling: g.visibility_ceiling ?? 'shared:household', matrix: g.matrix ?? [],
@@ -265,6 +276,25 @@ export async function startServer(opts: { port?: number } = {}): Promise<ServerH
         return err(res, 400, 'expired_draft', 'the draft has expired and can never execute');
       // Even when enabled, a relayed action needs the receiver's gate (BP-08 §4).
       return send(res, 200, { body: { state: 'needs_human', needs_human: { reason: 'authority_exceeded', addressed_to: 'staff', explanation: 'awaiting receiver confirm', expires_at: new Date(Date.now() + 7 * 864e5).toISOString() } } });
+    }
+
+    if (method === 'presence.read') {
+      // Live-query narrowness (BP-04 §3.1.3, T-COM-08): return the narrowest computed answer,
+      // never the underlying diary rows.
+      const p = await pipe.presence(grant.member_lens);
+      return send(res, 200, { body: { available: p.available, eta: p.eta } });
+    }
+
+    if (method === 'state.checksum') {
+      return send(res, 200, { body: { checksum: await pipe.snapshotChecksum() } });
+    }
+
+    if (method === 'records.resync') {
+      // Staged atomic resync (BP-04 §3.3.3, T-COM-01): a resync killed before the swap leaves
+      // prior state byte-intact; the read model never blanks.
+      const recs = (envelope.body?.records ?? []) as any[];
+      const r = await pipe.stagedResync(recs, grant.grantee, !!envelope.body?.crashBeforeSwap);
+      return send(res, 200, { body: { swapped: r.swapped } });
     }
 
     if (method === 'records.ingest') {

@@ -5,7 +5,7 @@
 
 import { defineTest, type TestContext } from '../harness.js';
 import { WireClient } from '../peer/wire.js';
-import { urn, resetUuids, validPerson, validActivity, without } from '../fixtures/records.js';
+import { randUrn as urn, resetUuids, validPerson, validActivity, without } from '../fixtures/records.js';
 
 function wire(ctx: TestContext): WireClient {
   if (!ctx.target) ctx.skip('COM needs --target (the wire surface)');
@@ -13,11 +13,31 @@ function wire(ctx: TestContext): WireClient {
 }
 const CELL = { capability: 'records', direction: 'offer', mode: 'read', sensitivity_ceiling: 'S1' };
 
-// T-COM-01 — staged-resync crash test. Needs a process-kill harness; deferred.
+// T-COM-01 — staged-resync crash test (AC-04.1).
 defineTest({
   id: 'T-COM-01', suite: 'COM', cls: 'D', needs: 'wire',
   name: 'staged-resync crash test', clause: 'BP-04 §3.3.3 / AC-04.1 (T-COM-01)',
-  async run(ctx) { ctx.skip('staged-resync crash test needs a kill harness — Wave C remainder'); },
+  async run(ctx) {
+    const w = wire(ctx); resetUuids();
+    await w.handshake({ matrix: [
+      { capability: 'records', direction: 'offer', mode: 'read', sensitivity_ceiling: 'S1' },
+      { capability: 'state', direction: 'offer', mode: 'read', sensitivity_ceiling: 'S1' },
+    ] });
+    // Seed a known-good committed state.
+    await w.call('records.ingest', { records: [validPerson({ id: urn('garagebrain', 'entity'), external_ref: 'sync/base', owner: 'mem-a' })] });
+    const c0 = (await w.call('state.checksum', {})).body?.body?.checksum;
+    // A resync killed before the swap: stage new records, then crash before commit.
+    const newRecs = [validPerson({ id: urn('garagebrain', 'entity'), external_ref: 'sync/new', owner: 'mem-a' })];
+    const crashed = await w.call('records.resync', { records: newRecs, crashBeforeSwap: true });
+    const c1 = (await w.call('state.checksum', {})).body?.body?.checksum;
+    ctx.note('checksums', { c0, afterCrash: c1, swapped: crashed.body?.body?.swapped });
+    ctx.check(crashed.body?.body?.swapped === false, 'BP-04 §3.3.3', 'a resync killed before the swap must not swap');
+    ctx.check(c0 === c1 && !!c0, 'BP-04 §3.3.3 / AC-04.1',
+      'the read model must equal the pre-sync state byte-for-byte after a mid-run crash (never blanks)');
+    // A clean resync then commits.
+    const ok = await w.call('records.resync', { records: newRecs });
+    ctx.check(ok.body?.body?.swapped === true, 'BP-04 §3.3.3', 'a clean staged resync swaps atomically');
+  },
 });
 
 // T-COM-02 — loop-guard echo test (AC-04.2).
@@ -84,9 +104,19 @@ defineTest({
   },
 });
 
-// T-COM-08 — live-query narrowness. Needs a presence capability; deferred.
+// T-COM-08 — live-query narrowness (BP-04 §3.1.3).
 defineTest({
   id: 'T-COM-08', suite: 'COM', cls: 'D', needs: 'wire',
   name: 'live-query narrowness', clause: 'BP-04 §3.1.3 (T-COM-08)',
-  async run(ctx) { ctx.skip('live-query/presence capability not yet built — Wave C remainder'); },
+  async run(ctx) {
+    const w = wire(ctx); resetUuids();
+    await w.handshake({ matrix: [{ capability: 'presence', direction: 'offer', mode: 'read', sensitivity_ceiling: 'S0' }] });
+    const r = await w.call('presence.read', { question: 'home by 18:00?' });
+    ctx.note('presence answer', r.body);
+    const body = r.body?.body ?? {};
+    // The narrowest computed answer only — never the underlying diary rows.
+    ctx.check(typeof body.available === 'boolean', 'BP-04 §3.1.3', 'a presence query must return the narrowest computed answer');
+    ctx.check(!('records' in body) && !Array.isArray((body as any).diary), 'BP-04 §3.1.3',
+      'a presence query must never return underlying diary rows');
+  },
 });
