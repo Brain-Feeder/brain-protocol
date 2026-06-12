@@ -1,0 +1,3 @@
+node_modules/
+keys/registry-key.priv.json
+*.log

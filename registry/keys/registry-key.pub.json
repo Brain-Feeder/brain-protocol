@@ -1,0 +1,7 @@
+{
+  "crv": "Ed25519",
+  "x": "SG__V-V7kbBTgybOfBMg2lJBevOhBZRiUfCMMb8UHRE",
+  "kty": "OKP",
+  "use": "sig",
+  "kid": "registry-1"
+}

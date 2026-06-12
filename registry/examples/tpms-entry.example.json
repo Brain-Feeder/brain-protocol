@@ -1,0 +1,16 @@
+{
+  "system_id": "tpms",
+  "card_url": "https://brain.petermccormack.com/.well-known/brain-protocol/card.json",
+  "card_key_fingerprint": "ed25519:REPLACE_WITH_PINNED_FINGERPRINT",
+  "class": "D",
+  "suite_version": "2.0.1",
+  "certification": { "tier": "self", "issued": "2026-06-12" },
+  "tck": {
+    "version": "2.0.1",
+    "kit_commit": "9b480a3",
+    "passed_at": "2026-06-12",
+    "results_url": "https://brain.petermccormack.com/conformance/2.0.1.json"
+  },
+  "status": "active",
+  "revocation": null
+}

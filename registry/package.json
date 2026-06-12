@@ -1,0 +1,9 @@
+{
+  "name": "brain-protocol-registry",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Brain Protocol conformance registry v0 (BP-09 §4): a signed, append-only, publicly-readable record of conformance attestations. Hosted from this repository. Carries no telemetry — it records attestations given to it, it observes nothing (CD-3).",
+  "dependencies": { "jose": "^5.9.6", "ajv": "^8.17.1", "ajv-formats": "^3.0.1" },
+  "devDependencies": { "tsx": "^4.19.2", "typescript": "^5.6.3", "@types/node": "^22.9.0" }
+}

@@ -5,6 +5,17 @@ MINOR (forward-compatible), breaking = MAJOR, errata = PATCH.
 
 ## Unreleased
 
+- **Conformance registry v0 (BP-09 §4, 2026-06-12).** `registry/` — a signed, append-only,
+  publicly-readable record of conformance attestations, hosted from this repository, with no
+  telemetry (CD-3). Closes the gap a partner integration surfaced: a published `results.json` is
+  evidence, but a registry entry is what makes a conformance *claim* legitimate (§3.1/§3.3). Each
+  entry is hash-chained and signed by the registry key; CI verifies the whole chain (links,
+  signatures, schema, the CD-2 S2⇒verified invariant) on every push, and tampering with any stored
+  field fails verification. Entry shape in `schemas/registry-entry.schema.json`; tooling supports
+  keygen/register/status/revoke/verify. Ships live and empty — the registry key exists, ready for
+  the first system to publish results and register. The private registry key is the maintainer's
+  custody (git-ignored).
+
 - **Suite 2.0.1 (PATCH, 2026-06-12).** Carries the system-id fix below (a coupling removed, no
   test semantics changed — PATCH per BP-09 §5.2). `results.json` now also records `kit_commit`
   (the kit's git short hash) so published results cite an exact, reproducible build until tagged

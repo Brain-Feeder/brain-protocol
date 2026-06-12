@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://brain-protocol.org/schemas/registry-entry.schema.json",
+  "title": "Brain Protocol v2 registry entry",
+  "description": "One system's entry in the conformance registry (BP-09 §4.1, normative shape). Entries are signed by the registry key; the registry is append-only in history (status changes are events, not overwrites), publicly readable, and carries no telemetry — it records attestations given to it, it observes nothing (CD-3).",
+  "type": "object",
+  "required": ["system_id", "card_url", "card_key_fingerprint", "class", "suite_version", "certification", "tck", "status"],
+  "properties": {
+    "system_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,63}$" },
+    "card_url": { "type": "string", "format": "uri", "description": "The system's signed agent card at its well-known path (BP-03 §2.1)." },
+    "card_key_fingerprint": { "type": "string", "pattern": "^ed25519:", "description": "Fingerprint of the card-signing identity key; peers verify the served card matches (BP-09 §4.2)." },
+    "class": { "enum": ["D", "A", "H"] },
+    "suite_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "certification": {
+      "type": "object",
+      "required": ["tier", "issued"],
+      "properties": {
+        "tier": { "enum": ["self", "verified"], "description": "Class D with no S2 capability self-certifies; Classes A/H and any S2 capability require verified certification (CD-2, BP-09 §3.1)." },
+        "signatures": { "type": "array", "items": { "type": "string" }, "description": "Required for tier 'verified': the suite editor plus a certified Class H peer (BP-09 §3.1)." },
+        "issued": { "type": "string", "description": "Issue date (YYYY-MM-DD)." },
+        "expires": { "type": "string", "description": "Verified certificates expire 24 months after issue (BP-09 §3.2); self-certification expires at the next MAJOR suite version." }
+      }
+    },
+    "tck": {
+      "type": "object",
+      "required": ["version", "passed_at", "results_url"],
+      "properties": {
+        "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+        "kit_commit": { "type": "string", "description": "Exact kit build the results cite (results.json kit_commit)." },
+        "passed_at": { "type": "string" },
+        "results_url": { "type": "string", "format": "uri", "description": "The full machine-readable results, published at a stable URL (schemas/tck-results.schema.json)." }
+      }
+    },
+    "s2_capabilities": { "type": "array", "items": { "type": "string" }, "description": "S2 capabilities offered; any entry here requires tier 'verified' (CD-2)." },
+    "status": { "enum": ["active", "suspended", "revoked"] },
+    "revocation": {
+      "type": ["object", "null"],
+      "properties": {
+        "at": { "type": "string" },
+        "reason": { "type": "string" },
+        "evidence_url": { "type": "string", "format": "uri" },
+        "appeal": { "type": ["string", "null"] }
+      },
+      "description": "Set when status is revoked (BP-09 §4.3). Revocation stands during appeal — fail closed, not open."
+    }
+  }
+}

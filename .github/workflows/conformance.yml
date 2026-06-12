@@ -38,6 +38,11 @@ jobs:
       - name: Prove the kit catches a broken law (T-REF-02)
         run: cd reference && bash break-a-law.sh
 
+      - name: Verify the conformance registry (BP-09 §4 — chain, signatures, schema)
+        run: |
+          cd registry && (npm ci || npm install)
+          npx tsx src/cli.ts verify
+
       - name: Upload conformance results
         if: always()
         uses: actions/upload-artifact@v4
