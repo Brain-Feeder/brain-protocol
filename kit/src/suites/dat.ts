@@ -7,6 +7,7 @@ import { defineTest, type TestContext } from '../harness.js';
 import type { Adapter, BrainRecord, MemberRef } from '../types.js';
 import { validPerson, validActivity, validEdge, validAction, urn, resetUuids } from '../fixtures/records.js';
 import { validateForgetReceipt } from '../validate.js';
+import { WireClient } from '../peer/wire.js';
 
 const A: MemberRef = { id: 'mem-a', role: 'adult' };
 const B: MemberRef = { id: 'mem-b', role: 'adult' };
@@ -179,21 +180,40 @@ defineTest({
   },
 });
 
-// T-DAT-07 — bounds hold. Served-endpoint behaviour; proven over the wire (BP-04 §9.3).
+// T-DAT-07 — bounds hold (AC-02.5). Served-endpoint behaviour, over the wire.
 defineTest({
   id: 'T-DAT-07', suite: 'DAT', cls: 'D', needs: 'wire',
   name: 'bounds hold', clause: 'BP-02 §6 / AC-02.5',
   async run(ctx) {
-    ctx.skip('bounds is a served-endpoint law — run with --target (wire layer)');
+    const w = new WireClient(ctx.target!); resetUuids();
+    await w.handshake({ matrix: [
+      { capability: 'records', direction: 'offer', mode: 'read', sensitivity_ceiling: 'S1' },
+      { capability: 'calendar', direction: 'offer', mode: 'read', sensitivity_ceiling: 'S1' },
+    ] });
+    // Seed 600 rows owned by the member lens, then request a page over the 500 cap.
+    const batch: BrainRecord[] = [];
+    for (let i = 0; i < 600; i++) batch.push(validPerson({ id: urn('garagebrain', 'entity'), external_ref: `bulk/${i}`, owner: 'mem-a' }));
+    const ing = await w.call('records.ingest', { records: batch });
+    ctx.note('bulk ingest', { status: ing.status, accepted: ing.body?.body?.accepted });
+    const page = await w.call('calendar.read', { limit: 1000 });
+    ctx.note('over-cap page', { count: page.body?.body?.records?.length, truncated: page.body?.body?.truncated, cursor: page.body?.body?.cursor });
+    ctx.check(page.body?.body?.records?.length <= 500, 'BP-02 §6', 'an over-cap response must be truncated at the batch cap');
+    ctx.check(page.body?.body?.truncated === true && !!page.body?.body?.cursor, 'BP-02 §6',
+      'an over-cap response must be flagged truncated and carry a cursor — never silently dropped');
   },
 });
 
-// T-DAT-08 — rate limits. Served-endpoint behaviour; proven over the wire (BP-04 §9.3).
+// T-DAT-08 — rate limits (AC-02.5). Over the wire.
 defineTest({
   id: 'T-DAT-08', suite: 'DAT', cls: 'D', needs: 'wire',
   name: 'rate limits', clause: 'BP-02 §6 / AC-02.5',
   async run(ctx) {
-    ctx.skip('rate limiting is a served-endpoint law — run with --target (wire layer)');
+    const w = new WireClient(ctx.target!);
+    await w.handshake({ matrix: [{ capability: 'calendar', direction: 'offer', mode: 'read', sensitivity_ceiling: 'S1' }], ratePerMinute: 5 });
+    const codes: number[] = [];
+    for (let i = 0; i < 7; i++) codes.push((await w.call('calendar.read', { limit: 1 })).status);
+    ctx.note('status sequence', codes);
+    ctx.check(codes.includes(429), 'BP-02 §6', 'an over-rate caller must receive 429, never a silent drop');
   },
 });
 

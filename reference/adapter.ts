@@ -59,6 +59,13 @@ class ReferenceAdapter implements Adapter {
   async restore(snapshot: Snapshot): Promise<RestoreResult> { return this.pipe.restore(snapshot); }
   async snapshotChecksum(): Promise<string> { return this.pipe.snapshotChecksum(); }
 
+  async recordConfirm(actionId: string, payloadHash: string, by: string): Promise<void> {
+    this.pipe.recordConfirm(actionId, payloadHash, by);
+  }
+  async tryExecute(actionId: string, payloadHash: string, idempotencyKey: string) {
+    return this.pipe.tryExecute(actionId, payloadHash, idempotencyKey);
+  }
+
   /** Helpers the kit may call for forget tests: seed a derived memory whose provenance reaches
    *  the connection (so forget-to-zero is proven across derived stores, BP-02 §5.3). */
   async seedDerivedMemory(owner: string, provenance: string[], connection: string): Promise<string> {

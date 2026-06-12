@@ -4,5 +4,5 @@
     "lib": ["ES2022"], "strict": true, "esModuleInterop": true, "skipLibCheck": true,
     "resolveJsonModule": true, "noEmit": true, "types": ["node"]
   },
-  "include": ["src/**/*.ts", "adapter.ts"]
+  "include": ["src/**/*.ts", "adapter.ts", "serve.ts"]
 }

@@ -421,4 +421,27 @@ export class Pipe {
     }
     return createHash('sha256').update(JSON.stringify(docs)).digest('hex');
   }
+
+  // -------------------------------------------------------------------------
+  // The Class D human gate (BP-08 §2): server-side recorded, payload-hash-bound, idempotent.
+  // A client claim of "confirmed" is nothing — only a stored confirm permits execution.
+  // -------------------------------------------------------------------------
+  private confirms = new Map<string, Set<string>>();   // actionId -> set of confirmed payload hashes
+  private executed = new Map<string, Record_>();        // idempotency key -> original result
+
+  recordConfirm(actionId: string, payloadHash: string, _by: string): void {
+    const set = this.confirms.get(actionId) ?? new Set<string>();
+    set.add(payloadHash);
+    this.confirms.set(actionId, set);
+  }
+
+  tryExecute(actionId: string, payloadHash: string, idempotencyKey: string): { executed: boolean; reason?: string; result?: Record_ } {
+    if (this.executed.has(idempotencyKey)) return { executed: false, reason: 'idempotency_replay', result: this.executed.get(idempotencyKey) };
+    const set = this.confirms.get(actionId);
+    if (!set || set.size === 0) return { executed: false, reason: 'no_stored_confirm' };
+    if (!set.has(payloadHash)) return { executed: false, reason: 'payload_hash_mismatch' };
+    const result = { appointment_ref: `appt/${randomBytes(3).toString('hex')}` };
+    this.executed.set(idempotencyKey, result);
+    return { executed: true, result };
+  }
 }
