@@ -5,6 +5,13 @@ security, a small Node server, no AI, no UI. It implements the data-layer laws (
 provider profile of BP-03/BP-04, and passes the Class D suite from a clean start. It is the kit's
 own proof and the partner onboarding artefact — small enough to read in an afternoon.
 
+> **This is a conformance reference, not a production server.** It ships unauthenticated `/test/*`
+> endpoints (for out-of-band key pinning, BUILD-BRIEF §6.3) and the `BRAIN_BREAK` law-breaker, and
+> serves plain HTTP. It refuses to start under `NODE_ENV=production` or `BRAIN_PRODUCTION=1`. Read it
+> to learn the laws and copy the patterns; do not deploy it as your Class D system. A production
+> system implements the same laws but issues grants through the BP-03 §6 consent ceremony and
+> terminates TLS at the edge. See [`SECURITY-REVIEW.md`](SECURITY-REVIEW.md) for the full self-audit.
+
 ## T-REF-01 — clean-start run (AC-09.1)
 
 From a clean clone, with Node 22+:

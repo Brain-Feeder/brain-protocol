@@ -29,14 +29,25 @@ const BREAK = process.env.BRAIN_BREAK ?? '';
 export interface ServerHandle { url: string; port: number; pipe: Pipe; identityFingerprint: string; close: () => Promise<void>; }
 
 export async function startServer(opts: { port?: number } = {}): Promise<ServerHandle> {
+  // The reference is a conformance target, not a production server: it ships unauthenticated
+  // /test/* affordances (out-of-band key pinning, BUILD-BRIEF §6.3) and the BRAIN_BREAK law-
+  // breaker. Refuse to run in a production posture so it can never be mistaken for one
+  // (SECURITY-REVIEW.md). A real Class D system implements the same laws but issues grants
+  // through the BP-03 §6 consent ceremony, never an open route.
+  if (process.env.NODE_ENV === 'production' || process.env.BRAIN_PRODUCTION === '1') {
+    throw new Error('the reference pipe is a conformance reference, not a production server — see reference/SECURITY-REVIEW.md');
+  }
   const port = opts.port ?? 8080;
   const pipe = new Pipe();
   await pipe.start();
   const identity: KeyPairJWK = await mintEd25519('ref-id');
   const grants = new Map<string, Grant>();
   const tokens = new Map<string, Token>();          // token hash -> token
-  const seenNonces = new Map<string, Set<string>>(); // grant_id -> nonces
+  // nonce -> first-seen timestamp, pruned to the ±5-min window so the store stays bounded
+  // (SECURITY-REVIEW.md: unbounded nonce sets were a memory-exhaustion DoS).
+  const seenNonces = new Map<string, Map<string, number>>(); // grant_id -> (nonce -> ts)
   const rateWindow = new Map<string, number[]>();    // grant_id -> timestamps
+  const NONCE_WINDOW_MS = 5 * 60 * 1000;
 
   const cardBody = {
     card_format: 1, system_id: 'brain-reference', name: 'Brain Protocol Reference Pipe',
@@ -117,26 +128,20 @@ export async function startServer(opts: { port?: number } = {}): Promise<ServerH
       if (req.method === 'POST' && path === '/test/connect') {
         const { cardJws, cardBody: peerBody, pinnedFingerprint, peerFingerprint } = await readBody(req);
         if (!cardJws) return send(res, 200, { proceed: false, reason: 'unsigned_card' });
-        // verify signature against a key in the card's identity_keys.
+        const keyJwk = peerBody?.identity_keys?.[0];
+        if (!keyJwk) return send(res, 200, { proceed: false, reason: 'no_identity_key' });
+        // The card JWS payload must equal jcs(peerBody), signed by a key in identity_keys, and the
+        // pinned out-of-band fingerprint must match (BP-03 §2.3).
         try {
-          const keyJwk = peerBody?.identity_keys?.[0];
-          if (!keyJwk) return send(res, 200, { proceed: false, reason: 'no_identity_key' });
-          await verifyPoP(cardJws, { kty: 'OKP', crv: 'Ed25519', x: keyJwk.x }).catch(() => { throw new Error('bad'); });
-          // verifyPoP expects PoP-claims JSON; for a card the payload is the card body. Verify by
-          // re-signing check instead: compare the JWS payload to jcs(peerBody).
-        } catch { /* fall through to manual verify below */ }
-        // Manual verify: the card JWS payload must equal jcs(peerBody) and pinned fp must match.
-        try {
-          const keyJwk = peerBody.identity_keys[0];
           const { flattenedVerify, importJWK } = await import('jose');
           const key = await importJWK({ kty: 'OKP', crv: 'Ed25519', x: keyJwk.x }, 'EdDSA');
           const { payload } = await flattenedVerify(cardJws, key);
-          const ok = new TextDecoder().decode(payload) === jcs(peerBody);
-          if (!ok) return send(res, 200, { proceed: false, reason: 'body_signature_mismatch' });
+          if (new TextDecoder().decode(payload) !== jcs(peerBody))
+            return send(res, 200, { proceed: false, reason: 'body_signature_mismatch' });
           if (pinnedFingerprint && peerFingerprint && pinnedFingerprint !== peerFingerprint)
             return send(res, 200, { proceed: false, reason: 'fingerprint_unpinned' });
           return send(res, 200, { proceed: true });
-        } catch (e) {
+        } catch {
           return send(res, 200, { proceed: false, reason: 'invalid_signature' });
         }
       }
@@ -168,7 +173,7 @@ export async function startServer(opts: { port?: number } = {}): Promise<ServerH
           granteePublicJwk: g.granteePublicJwk, action_execute: g.action_execute ?? 'dark',
           rate_per_minute: g.rate_per_minute ?? 60, revoked: false,
         });
-        seenNonces.set(g.grant_id, new Set());
+        seenNonces.set(g.grant_id, new Map());
         return send(res, 200, { installed: true });
       }
 
@@ -199,7 +204,8 @@ export async function startServer(opts: { port?: number } = {}): Promise<ServerH
     } catch (e) {
       const msg = (e as Error).message;
       if (msg === 'payload_too_large') return err(res, 413, 'payload_too_large', 'request body too large');
-      return err(res, 500, 'protocol_error', msg);
+      // Do not leak internal exception detail to the caller (SECURITY-REVIEW.md); keep it server-side.
+      return err(res, 500, 'protocol_error', 'internal error');
     }
   });
 
@@ -234,10 +240,12 @@ export async function startServer(opts: { port?: number } = {}): Promise<ServerH
     const skew = Math.abs(Date.now() - Date.parse(claims.issued_at));
     if (Number.isNaN(skew) || skew > 5 * 60 * 1000) return err(res, 401, 'invalid_signature', 'timestamp outside ±5-minute window');
 
-    // Nonce replay (BP-03 §4.2, BP-07 §3.2).
+    // Nonce replay (BP-03 §4.2, BP-07 §3.2). Prune to the window so the store stays bounded.
+    const nowN = Date.now();
     const nonces = seenNonces.get(grant.grant_id)!;
+    for (const [n, ts] of nonces) if (nowN - ts > NONCE_WINDOW_MS) nonces.delete(n);
     if (nonces.has(claims.nonce)) return err(res, 409, 'replayed_nonce', 'nonce reused within the window');
-    nonces.add(claims.nonce);
+    nonces.set(claims.nonce, nowN);
 
     // Rate limit (BP-04 §9.3).
     const now = Date.now();
