@@ -1,0 +1,18 @@
+{
+  "name": "brain-reference-pipe",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The Brain Protocol v2 reference Class D data provider (BUILD-BRIEF §4). A deliberately boring Postgres + RLS pipe that passes the Class D suite. The git history teaches the BP-02 §8 build order: each checklist point is a commit.",
+  "dependencies": {
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
+    "embedded-postgres": "17.5.0-beta.15",
+    "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.21",
+    "@types/pg": "^8.11.10",
+    "typescript": "^5.9.3"
+  }
+}

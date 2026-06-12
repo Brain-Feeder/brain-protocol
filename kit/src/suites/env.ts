@@ -3,7 +3,9 @@
 // Every assertion names the spec clause (BP-01 §/AC-01.x).
 
 import { defineTest, type TestContext } from '../harness.js';
-import type { Adapter, BrainRecord, SeedResult } from '../types.js';
+import type { Adapter, BrainRecord, SeedResult, MemberRef } from '../types.js';
+
+const A: MemberRef = { id: 'mem-a', role: 'adult' };
 import {
   validPerson, validVehicle, validActivity, validEdge, validAction,
   validGoalEntity, validGoalActivity, without, withoutAttr, urn, resetUuids,
@@ -18,7 +20,7 @@ function adapter(ctx: TestContext): Adapter {
 }
 
 async function seed(ctx: TestContext, recs: BrainRecord[]): Promise<SeedResult> {
-  return adapter(ctx).seedAs('anon', recs, { connection: CONN });
+  return adapter(ctx).seedAs(A, recs, { connection: CONN });
 }
 
 // T-ENV-01 — envelope rejection (AC-01.1).
@@ -34,7 +36,7 @@ defineTest({
     const controls: Record<string, BrainRecord> = {
       entity: validPerson(), activity: validActivity(), edge: validEdge(), action: validAction(),
     };
-    const cres = await a.seedAs('anon', Object.values(controls), { connection: CONN });
+    const cres = await a.seedAs(A, Object.values(controls), { connection: CONN });
     ctx.note('valid controls', { accepted: cres.accepted.length, rejected: cres.rejected });
     ctx.check(cres.rejected.length === 0 && cres.accepted.length === 4,
       'BP-01 §5 / AC-01.1', `valid control records of each primitive must be accepted; rejected=${JSON.stringify(cres.rejected)}`);
@@ -66,7 +68,7 @@ defineTest({
     let allRejected = true;
     const detail: unknown[] = [];
     for (const { label, rec } of invalids) {
-      const r = await a.seedAs('anon', [rec], { connection: CONN });
+      const r = await a.seedAs(A, [rec], { connection: CONN });
       const rejected = r.rejected.length === 1 && r.accepted.length === 0;
       if (!rejected) allRejected = false;
       detail.push({ label, rejected, reasons: r.rejected[0]?.reasons });
@@ -76,7 +78,7 @@ defineTest({
       `every invalid record must be rejected with a per-field error and counted; got ${JSON.stringify(detail.filter((d: any) => !d.rejected))}`);
 
     // Counted: rejections must increment the malformed counter.
-    const counters = (await a.seedAs('anon', [without(validPerson(), 'owner')], { connection: CONN })).counters;
+    const counters = (await a.seedAs(A, [without(validPerson(), 'owner')], { connection: CONN })).counters;
     ctx.check(counters.rejected_malformed > 0, 'BP-04 §9.2',
       'rejections must be counted in rejected_malformed (boundary counting)');
   },
@@ -89,9 +91,9 @@ defineTest({
   async run(ctx) {
     const a = adapter(ctx); await a.reset(); resetUuids();
     const backfilled = validPerson({ valid_time: '2019-04-01T00:00:00Z', system_time: '2026-06-11T09:12:00Z', external_ref: 'customer/backfill' });
-    const s = await a.seedAs('anon', [backfilled], { connection: CONN });
+    const s = await a.seedAs(A, [backfilled], { connection: CONN });
     ctx.check(s.accepted.length === 1, 'BP-01 §6', 'a backfilled fact must be accepted');
-    const back = await a.exportAs('anon', { externalRef: 'customer/backfill' });
+    const back = await a.exportAs(A, { externalRef: 'customer/backfill' });
     const got = back[0];
     ctx.note('round-trip', { sent: { vt: backfilled.valid_time, st: backfilled.system_time }, got: { vt: got?.valid_time, st: got?.system_time } });
     ctx.check(got?.valid_time === '2019-04-01T00:00:00Z' && got?.system_time === '2026-06-11T09:12:00Z',
@@ -107,10 +109,10 @@ defineTest({
   async run(ctx) {
     const a = adapter(ctx); await a.reset(); resetUuids();
     const degen = validPerson({ valid_time: '2026-06-11T09:12:00Z', system_time: '2026-06-11T09:12:00Z', external_ref: 'customer/degen' });
-    const ok = await a.seedAs('anon', [degen], { connection: CONN });
+    const ok = await a.seedAs(A, [degen], { connection: CONN });
     ctx.check(ok.accepted.length === 1, 'BP-01 §6', 'valid_time == system_time (degenerate form) must be accepted');
-    const noVt = await a.seedAs('anon', [without(validPerson({ external_ref: 'c/x' }), 'valid_time')], { connection: CONN });
-    const noSt = await a.seedAs('anon', [without(validPerson({ external_ref: 'c/y' }), 'system_time')], { connection: CONN });
+    const noVt = await a.seedAs(A, [without(validPerson({ external_ref: 'c/x' }), 'valid_time')], { connection: CONN });
+    const noSt = await a.seedAs(A, [without(validPerson({ external_ref: 'c/y' }), 'system_time')], { connection: CONN });
     ctx.check(noVt.rejected.length === 1 && noSt.rejected.length === 1, 'BP-01 §6',
       'omission of either time axis must be rejected');
   },
@@ -124,11 +126,11 @@ defineTest({
     const a = adapter(ctx); await a.reset(); resetUuids();
     const asEntity = validGoalEntity();
     const asActivity = validGoalActivity();
-    const both = await a.seedAs('anon', [asEntity, asActivity], { connection: CONN });
+    const both = await a.seedAs(A, [asEntity, asActivity], { connection: CONN });
     ctx.check(both.accepted.length === 2, 'BP-01 §3.2', 'a goal must be accepted as either entity or activity');
 
     // Both queryable as the same logical concept (same target/measure/horizon).
-    const ex = await a.exportAs('anon');
+    const ex = await a.exportAs(A);
     const goals = ex.filter((r) => r.subtype === 'goal');
     ctx.note('goals stored', goals.map((g) => ({ type: g.type, target: (g.attributes as any)?.target })));
     ctx.check(goals.length === 2 && goals.every((g) => (g.attributes as any)?.target === 'complete a 10k race'),
@@ -137,11 +139,11 @@ defineTest({
     // Mutants missing each of target/measure/horizon — rejected naming the attribute.
     for (const attr of ['target', 'measure', 'horizon']) {
       const mutant = withoutAttr(validGoalEntity({ external_ref: `goal/m-${attr}` }), attr);
-      const r = await a.seedAs('anon', [mutant], { connection: CONN });
+      const r = await a.seedAs(A, [mutant], { connection: CONN });
       ctx.check(r.rejected.length === 1, 'BP-01 §3.2 / AC-01.3', `a goal missing ${attr} must be rejected`);
     }
     // type:"goal" rejected.
-    const asPrim = await a.seedAs('anon', [validGoalEntity({ type: 'goal' as unknown as string, external_ref: 'goal/prim' })], { connection: CONN });
+    const asPrim = await a.seedAs(A, [validGoalEntity({ type: 'goal' as unknown as string, external_ref: 'goal/prim' })], { connection: CONN });
     ctx.check(asPrim.rejected.length === 1, 'BP-01 §3.1', 'type "goal" must be rejected — goal is never a fifth primitive');
   },
 });
@@ -154,9 +156,9 @@ defineTest({
     const a = adapter(ctx); await a.reset(); resetUuids();
     // Unknown subtype, no mapping declared — must pass through opaquely.
     const unknown = validEdge({ subtype: 'employed_by', external_ref: 'edge/emp' });
-    const s = await a.seedAs('anon', [unknown], { connection: CONN });
+    const s = await a.seedAs(A, [unknown], { connection: CONN });
     ctx.check(s.accepted.length === 1, 'BP-01 §11', 'an unmapped unknown subtype must pass through opaquely, not be rejected');
-    const ex = await a.exportAs('anon');
+    const ex = await a.exportAs(A);
     const re = ex.find((r) => r.id === unknown.id);
     ctx.check(re?.subtype === 'employed_by', 'BP-01 §11', 'the unknown subtype must be re-exported verbatim');
     // Provably never aliased to works_for.
@@ -172,9 +174,9 @@ defineTest({
   async run(ctx) {
     const a = adapter(ctx); await a.reset(); resetUuids();
     const odd = validPerson({ visibility: 'shared:club', external_ref: 'customer/club' });
-    const s = await a.seedAs('anon', [odd], { connection: CONN });
+    const s = await a.seedAs(A, [odd], { connection: CONN });
     ctx.check(s.accepted.length === 1, 'BP-01 §8', 'an unknown scope must not cause rejection — it lands as private');
-    const ex = await a.exportAs('anon', { externalRef: 'customer/club' });
+    const ex = await a.exportAs(A, { externalRef: 'customer/club' });
     ctx.note('stored visibility', ex[0]?.visibility);
     ctx.check(ex[0]?.visibility === 'private', 'BP-01 §8 / CD-6',
       `an unknown visibility scope MUST be enforced as private (fail closed); got ${ex[0]?.visibility}`);
@@ -188,30 +190,30 @@ defineTest({
   async run(ctx) {
     const a = adapter(ctx); await a.reset(); resetUuids();
     const vehicle = validVehicle();
-    await a.seedAs('anon', [vehicle], { connection: CONN });
-    let ex = await a.exportAs('anon');
+    await a.seedAs(A, [vehicle], { connection: CONN });
+    let ex = await a.exportAs(A);
     let derived = ex.filter((r) => r.external_ref === 'vehicle/2231#mot_due');
     ctx.check(derived.length === 1, 'BP-01 §12', `exactly one derived activity must exist; got ${derived.length}`);
     ctx.check(Array.isArray(derived[0]?.provenance) && (derived[0]!.provenance as string[]).includes(vehicle.id!),
       'BP-01 §12', 'the derived activity must carry provenance to the entity URN');
 
     // Re-sync unchanged — no duplicate.
-    await a.seedAs('anon', [vehicle], { connection: CONN });
-    ex = await a.exportAs('anon');
+    await a.seedAs(A, [vehicle], { connection: CONN });
+    ex = await a.exportAs(A);
     derived = ex.filter((r) => r.external_ref === 'vehicle/2231#mot_due');
     ctx.check(derived.length === 1, 'BP-01 §12', 're-syncing the unchanged entity must create no second activity');
 
     // Edit the date — updates in place.
     const edited = validVehicle({ id: vehicle.id, attributes: { name: 'Land Rover Defender', registration: 'LD70 XKP', mot_due: '2028-03-14' } });
-    await a.seedAs('anon', [edited], { connection: CONN });
-    ex = await a.exportAs('anon');
+    await a.seedAs(A, [edited], { connection: CONN });
+    ex = await a.exportAs(A);
     derived = ex.filter((r) => r.external_ref === 'vehicle/2231#mot_due');
     ctx.check(derived.length === 1 && (derived[0]?.valid_time?.startsWith('2028') ?? false),
       'BP-01 §12', 'editing the attribute must update the same derived activity in place');
 
     // Archive the entity — cancels/removes the activity.
-    await a.seedAs('anon', [validVehicle({ id: vehicle.id, state: 'archived' })], { connection: CONN });
-    ex = await a.exportAs('anon');
+    await a.seedAs(A, [validVehicle({ id: vehicle.id, state: 'archived' })], { connection: CONN });
+    ex = await a.exportAs(A);
     derived = ex.filter((r) => r.external_ref === 'vehicle/2231#mot_due' && r.state !== 'cancelled');
     ctx.check(derived.length === 0, 'BP-01 §12', 'archiving the entity must cancel or remove the derived activity');
   },
@@ -224,8 +226,8 @@ defineTest({
   async run(ctx) {
     const a = adapter(ctx); await a.reset(); resetUuids();
     const rec = validPerson({ external_ref: 'customer/urn' });
-    await a.seedAs('anon', [rec], { connection: CONN });
-    const ex = await a.exportAs('anon', { externalRef: 'customer/urn' });
+    await a.seedAs(A, [rec], { connection: CONN });
+    const ex = await a.exportAs(A, { externalRef: 'customer/urn' });
     ctx.note('urn', { sent: rec.id, got: ex[0]?.id });
     ctx.check(ex[0]?.id === rec.id, 'BP-01 §4', 'the urn id must encode/decode losslessly (internal storage form is the implementer\'s business)');
   },
@@ -238,9 +240,9 @@ defineTest({
   async run(ctx) {
     const a = adapter(ctx); await a.reset(); resetUuids();
     const rec = validPerson({ external_ref: 'customer/fwd', future_field: { speculative: true } } as BrainRecord);
-    const s = await a.seedAs('anon', [rec], { connection: CONN });
+    const s = await a.seedAs(A, [rec], { connection: CONN });
     ctx.check(s.accepted.length === 1, 'BP-01 §14.3', 'an unknown envelope field must never cause rejection');
-    const ex = await a.exportAs('anon', { externalRef: 'customer/fwd' });
+    const ex = await a.exportAs(A, { externalRef: 'customer/fwd' });
     ctx.note('pass-through', ex[0]?.future_field);
     ctx.check((ex[0] as any)?.future_field?.speculative === true,
       'BP-01 §14.3', 'unknown fields must be preserved on pass-through');
