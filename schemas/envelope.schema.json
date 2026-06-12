@@ -1,0 +1,179 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://brain-protocol.org/schemas/envelope.schema.json",
+  "title": "Brain Protocol v2 record envelope",
+  "description": "The common envelope every record carries on the wire, per BP-01 §5. The four primitives are frozen: entity, activity, edge, action. type: 'goal' and type: 'attribute' are invalid by construction (BP-01 §3). Absent optional fields are omitted, never null; unknown fields are ignored for validation and passed through opaquely (BP-01 §14). Subtype base terms are enumerated in vocabulary.json; unknown subtypes received without a mapping pass through opaquely and are therefore not closed-enum here (BP-01 §10-§11).",
+  "type": "object",
+  "required": ["id", "type", "subtype", "source", "valid_time", "system_time", "visibility", "sensitivity"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Canonical wire identifier: urn:brain:<system>:<rtype>:<uuid> (BP-01 §4). Minted by the emitting system, stable for the record's life. The rtype segment must equal the record's type (enforced per type branch below).",
+      "pattern": "^urn:brain:[a-z0-9][a-z0-9-]{0,63}:(entity|activity|edge|action):[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "type": {
+      "description": "The primitive discriminator. Exactly four values; a fifth primitive is a MAJOR version event (BP-01 §3.1).",
+      "enum": ["entity", "activity", "edge", "action"]
+    },
+    "subtype": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z][a-z0-9_.:-]*$",
+      "description": "The wire name for what v0.1 called kind/activity_type/predicate/action_type. Base terms: see vocabulary.json (entity_subtypes, activity_subtypes, edge_predicates). Action verbs are named by the capability they invoke and validated against the grant matrix (BP-03), not the vocabulary. Unmapped unknown terms pass through opaquely (BP-01 §11)."
+    },
+    "source": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{0,63}$",
+      "description": "Which system asserted this record; also a method value (manual, derived, agent-inference) where applicable (BP-01 §5.2)."
+    },
+    "external_ref": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The source's own stable name for the record; the key for idempotent sync, entity resolution and forget. MUST except on edges (BP-01 §5.2)."
+    },
+    "provenance": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "pattern": "^urn:brain:[a-z0-9][a-z0-9-]{0,63}:(entity|activity|edge|action):[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      },
+      "description": "Record URNs this record was derived from (record-level derivation). MUST on derived or inferred records; a derived record without provenance is a forget leak and non-conformant (BP-01 §5.2)."
+    },
+    "origin_chain": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,63}$" },
+      "description": "Ordered system ids the record has passed through (system-level lineage; the BP-04 loop guard). MUST on synced/re-emitted records (BP-01 §5.2)."
+    },
+    "owner": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Opaque member reference (a local member id or a person-entity URN): whose life the record belongs to. Anchors the visibility law (BP-02) and the member lens (BP-03)."
+    },
+    "actor": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Who or what created/performed the record. Owner and actor are different facts. On actions this is proposed_by (BP-01 §5.3, §5.7)."
+    },
+    "subject": {
+      "type": "string",
+      "pattern": "^urn:brain:[a-z0-9][a-z0-9-]{0,63}:(entity|activity|edge|action):[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+      "description": "What the record is about. MUST on edges; OPTIONAL on activities (a denormalised convenience; the edge remains the source of truth)."
+    },
+    "object": {
+      "type": "string",
+      "pattern": "^urn:brain:[a-z0-9][a-z0-9-]{0,63}:(entity|activity|edge|action):[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+      "description": "The target of the edge's predicate. MUST on edges only."
+    },
+    "valid_time": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the fact happened or became true. RFC 3339 UTC with the Z designator. MUST on every record, every class (CD-5). When interval is present, valid_time MUST equal interval.start (BP-01 §6)."
+    },
+    "system_time": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the asserting system learned it. RFC 3339 UTC. MUST on every record, every class (CD-5). The degenerate form valid_time == system_time is permitted where the two genuinely coincide."
+    },
+    "interval": {
+      "type": "object",
+      "required": ["start"],
+      "properties": {
+        "start": { "type": "string", "format": "date-time" },
+        "end": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false,
+      "description": "The single wire spelling for every span. An open-ended span omits end (never null). A point-in-time record omits interval entirely (BP-01 §6)."
+    },
+    "state": {
+      "type": "string",
+      "description": "Where the record is in its type's state machine (BP-01 §7); partitioned values in vocabulary.json. MUST on activities and actions; OPTIONAL on entities; not used on edges."
+    },
+    "visibility": {
+      "type": "string",
+      "pattern": "^(private|public|shared:[a-z][a-z0-9_-]*)$",
+      "description": "Who may see the record: private | shared:<scope> | public. Registered scopes: partners, adults, household (vocabulary.json). Unknown scope ⇒ receiver treats as private (CD-6). public never means the open internet (BP-01 §8)."
+    },
+    "sensitivity": {
+      "enum": ["S0", "S1", "S2", "S3"],
+      "description": "Sensitivity class (BP-07); starter classification by subtype in vocabulary.json. Stamped by the asserting system; receivers MAY upgrade, MUST NOT downgrade. Note: an S3 payload never travels on any automatic protocol path — reference pointers travel at their own (≤ S2) class (BP-07 §2.4)."
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "exclusiveMaximum": 1,
+      "description": "How sure the asserting system is. Absent means asserted-as-fact by the source; emitters MUST NOT use confidence: 1.0 to mean fact — they omit the field. MUST on merge proposals and on derived/inferred records (BP-01 §5.5)."
+    },
+    "attributes": {
+      "type": "object",
+      "description": "Subtype-specific fields. attributes.name is MUST on entities; attributes.title is MUST on activities; attributes.summary SHOULD be present. Money is integer minor units plus ISO 4217 currency (amount_minor, currency). All-day flag travels as attributes.all_day; recurrence as attributes.recurrence (RFC 5545 RRULE) (BP-01 §5.5, §6)."
+    },
+    "summary": { "type": "string", "minLength": 1 },
+    "payload": { "type": "object" },
+    "payload_hash": { "type": "string", "pattern": "^sha256:" },
+    "requires_confirm": { "type": "boolean" },
+    "proposed_by": { "type": "string", "minLength": 1 },
+    "expires_at": { "type": "string", "format": "date-time" },
+    "gates": { "type": "array" },
+    "needs_human": { "type": "object" },
+    "result": { "type": "object" }
+  },
+  "allOf": [
+    {
+      "$comment": "Entity profile (BP-01 §5.6): external_ref, owner, attributes.name required; id rtype = entity; state, if present, from the entity/goal machine.",
+      "if": { "properties": { "type": { "const": "entity" } } },
+      "then": {
+        "required": ["external_ref", "owner", "attributes"],
+        "properties": {
+          "id": { "pattern": "^urn:brain:[a-z0-9][a-z0-9-]{0,63}:entity:" },
+          "attributes": { "required": ["name"] },
+          "state": { "enum": ["archived", "intended", "in_progress", "achieved", "abandoned"] }
+        }
+      }
+    },
+    {
+      "$comment": "Activity profile (BP-01 §5.6, §7): external_ref, owner, state, attributes.title required; id rtype = activity. The state union covers the activity machine and the goal machine (a goal may be emitted as an activity, BP-01 §3.2).",
+      "if": { "properties": { "type": { "const": "activity" } } },
+      "then": {
+        "required": ["external_ref", "owner", "state", "attributes"],
+        "properties": {
+          "id": { "pattern": "^urn:brain:[a-z0-9][a-z0-9-]{0,63}:activity:" },
+          "attributes": { "required": ["title"] },
+          "state": { "enum": ["scheduled", "open", "in_progress", "blocked", "done", "cancelled", "intended", "achieved", "abandoned", "archived"] }
+        }
+      }
+    },
+    {
+      "$comment": "Edge profile (BP-01 §5.6): subject and object required; no state machine — edge lifecycle is its validity interval; id rtype = edge. An edge's visibility and sensitivity must each be at least as strict as the stricter of its two endpoints (not machine-checkable from a single record).",
+      "if": { "properties": { "type": { "const": "edge" } } },
+      "then": {
+        "required": ["subject", "object"],
+        "properties": { "id": { "pattern": "^urn:brain:[a-z0-9][a-z0-9-]{0,63}:edge:" } },
+        "not": { "required": ["state"] }
+      }
+    },
+    {
+      "$comment": "Action profile (BP-01 §5.6, §5.7): the Action extension — summary, payload, requires_confirm — plus external_ref and state; id rtype = action. Full action constraints (gates, needs_human) in action.schema.json.",
+      "if": { "properties": { "type": { "const": "action" } } },
+      "then": {
+        "required": ["external_ref", "state", "summary", "payload", "requires_confirm"],
+        "properties": {
+          "id": { "pattern": "^urn:brain:[a-z0-9][a-z0-9-]{0,63}:action:" },
+          "state": { "enum": ["proposed", "confirmed", "executed", "declined", "expired", "needs_human", "relayed", "failed"] }
+        }
+      }
+    },
+    {
+      "$comment": "The reserved subtype goal (BP-01 §3.2, CD-9): emitted as entity or activity only, never a fifth primitive; target, measure and horizon are required attributes.",
+      "if": { "properties": { "subtype": { "const": "goal" } }, "required": ["subtype"] },
+      "then": {
+        "properties": {
+          "type": { "enum": ["entity", "activity"] },
+          "attributes": { "required": ["target", "measure", "horizon"] }
+        },
+        "required": ["attributes"]
+      }
+    }
+  ]
+}

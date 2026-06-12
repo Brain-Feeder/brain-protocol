@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://brain-protocol.org/schemas/grant.schema.json",
+  "title": "Brain Protocol v2 grant document",
+  "description": "The revocable permission document binding one direction of one connection (BP-03 §5). Absent grant = no access; absent cell = denied cell — default deny, both axes, both directions. A grant binds exactly one (grantor, grantee, member lens) triple. Serialisation: canonical JSON per BP-01 §14; both signatures are detached JWS over the canonical body minus the signatures member; a grant lacking either signature is not in force (BP-03 §5.3).",
+  "type": "object",
+  "required": ["grant_format", "grant_id", "grantor", "grantee", "protocol_version", "issued_at", "expires_at", "member_lens", "visibility_ceiling", "matrix", "keys", "action_execute", "signatures"],
+  "properties": {
+    "grant_format": { "const": 1 },
+    "grant_id": {
+      "type": "string",
+      "pattern": "^urn:brain:[a-z0-9][a-z0-9-]{0,63}:grant:.+$",
+      "description": "Minted by the grantor."
+    },
+    "grantor": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,63}$" },
+    "grantee": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,63}$" },
+    "protocol_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+(\\.[0-9]+)?$" },
+    "issued_at": { "type": "string", "format": "date-time" },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "90-day default, renewable (BP-03 §8.3). An expired grant fails closed."
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Amendments are new signed revisions with a monotonically increasing revision number (BP-03 §7.3)."
+    },
+    "member_lens": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The named member through whose data-layer eyes all of the grantor's filtering runs. MUST be set at grant level; a cell MAY narrow it, never widen it. NEVER a child — a grant document naming a child lens is invalid and MUST be refused (BP-03 §5.2, §6.3)."
+    },
+    "visibility_ceiling": {
+      "type": "string",
+      "pattern": "^(private|public|shared:[a-z][a-z0-9_-]*)$",
+      "description": "The maximum visibility scope above which nothing crosses, enforced in the data layer at answer time, regardless of the lens (BP-03 §5.2)."
+    },
+    "matrix": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Every permitted cell, explicitly. Any call mapping to an absent cell MUST be refused with cell_denied and logged (BP-03 §5.2).",
+      "items": {
+        "type": "object",
+        "required": ["capability", "direction", "mode", "sensitivity_ceiling"],
+        "properties": {
+          "capability": { "type": "string", "minLength": 1, "pattern": "^[a-z][a-z0-9_.]*$", "description": "A named module from the card's intersection (BP-03 §3.1)." },
+          "direction": { "enum": ["offer", "consume"], "description": "From the grantor's standpoint: offer = grantor serves it to the grantee; consume = grantor may call the grantee's." },
+          "mode": {
+            "enum": ["read", "propose"],
+            "description": "read (sync/query/subscribe) or propose (submit a draft Action into the receiving side's confirm gate). write-direct is reserved for a system's own records and MUST NOT appear in any grant cell — a grant document containing a write-direct cell is invalid and MUST be refused (BP-03 §5.2)."
+          },
+          "sensitivity_ceiling": {
+            "enum": ["S0", "S1", "S2"],
+            "description": "The highest class the cell may carry. S2 cells require the elevated consent of BP-03 §6.2. No cell may carry S3 — S3 never syncs (BP-07)."
+          },
+          "member_lens": { "type": "string", "minLength": 1, "description": "Optional per-cell narrowing of the grant-level lens; never a widening, never a child." }
+        }
+      }
+    },
+    "elevated": {
+      "type": "object",
+      "required": ["s2_capabilities", "consented_by", "consented_at", "step_up"],
+      "description": "Present iff any S2 cell exists (BP-03 §6.2, CD-1). S2 capabilities are consented distinctly from S0/S1 cells; silence or bundling = no S2. S2 payloads are JWE-encrypted end to end under the grant keys (BP-07).",
+      "properties": {
+        "s2_capabilities": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "consented_by": { "type": "string", "minLength": 1, "description": "The human whose data it is (guardian-of-self)." },
+        "consented_at": { "type": "string", "format": "date-time" },
+        "step_up": {
+          "enum": ["per_capability_first_use", "per_session"],
+          "description": "Step-up confirmation cadence. per_capability_first_use is the settled requirement (BP-03 §6.2(b), BP-07 §2.4); per_session is a stricter product option."
+        }
+      }
+    },
+    "keys": {
+      "type": "object",
+      "required": ["grantor_public", "grantee_public"],
+      "description": "Per-grant public keys (BP-03 §4): fresh asymmetric pairs per grant — Ed25519 signing and X25519 encryption — never reused across grants, never the identity key. Private halves live in each side's vault with zero client read paths. Encryption halves are required when any S2 cell exists. Revocation destroys the keys: cryptographic forgetting (BP-03 §4.5, BP-07 §3.6).",
+      "properties": {
+        "grantor_public": { "$ref": "#/$defs/ed25519_jwk" },
+        "grantee_public": { "$ref": "#/$defs/ed25519_jwk" },
+        "grantor_encryption_public": { "$ref": "#/$defs/x25519_jwk" },
+        "grantee_encryption_public": { "$ref": "#/$defs/x25519_jwk" },
+        "rotation_days": { "type": "integer", "minimum": 1, "description": "SHOULD be 90, aligned with token expiry (BP-03 §4.4)." }
+      }
+    },
+    "action_execute": {
+      "enum": ["dark", "enabled"],
+      "description": "dark at issue, always: connecting is not granting writes. Flipping to enabled is a deliberate, journalled human act distinct from consent to connect (BP-03 §5.4.3, BP-08)."
+    },
+    "audit": {
+      "type": "object",
+      "description": "Negotiation outcome recorded at issue (BP-03 §3.4).",
+      "properties": {
+        "negotiated_version": { "type": "string" },
+        "vocabulary_verdict": { "type": "string" }
+      }
+    },
+    "signatures": {
+      "type": "object",
+      "required": ["grantor", "grantee"],
+      "description": "Detached JWS by each side's identity key over the canonical body minus this member.",
+      "properties": {
+        "grantor": { "type": "string", "minLength": 1 },
+        "grantee": { "type": "string", "minLength": 1 }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "$comment": "Any S2 cell requires the elevated consent block (BP-03 §5.3, §6.2).",
+      "if": {
+        "properties": {
+          "matrix": {
+            "contains": {
+              "type": "object",
+              "properties": { "sensitivity_ceiling": { "const": "S2" } },
+              "required": ["sensitivity_ceiling"]
+            }
+          }
+        },
+        "required": ["matrix"]
+      },
+      "then": { "required": ["elevated"] }
+    }
+  ],
+  "$defs": {
+    "ed25519_jwk": {
+      "type": "object",
+      "required": ["kid", "kty", "crv", "x"],
+      "properties": {
+        "kid": { "type": "string", "minLength": 1 },
+        "kty": { "const": "OKP" },
+        "crv": { "const": "Ed25519" },
+        "x": { "type": "string", "minLength": 1 }
+      }
+    },
+    "x25519_jwk": {
+      "type": "object",
+      "required": ["kid", "kty", "crv", "x"],
+      "properties": {
+        "kid": { "type": "string", "minLength": 1 },
+        "kty": { "const": "OKP" },
+        "crv": { "const": "X25519" },
+        "x": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

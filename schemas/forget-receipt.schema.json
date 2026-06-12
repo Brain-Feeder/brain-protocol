@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://brain-protocol.org/schemas/forget-receipt.schema.json",
+  "title": "Brain Protocol v2 forget receipt",
+  "description": "The user-visible receipt produced after every forget-on-disconnect purge (BP-02 §5.4). The purge runs in dependency order (BP-02 §5.2); the audit then scans every table that can carry provenance — derived-memory stores included — and the result MUST be zero (BP-02 §5.3). The receipt is shown to the user in plain language, retained in the journal, and the derived_memories line is always explicit — derived memory is where forgetting fails silently. These are the minimum fields; systems MAY add more.",
+  "type": "object",
+  "required": ["receipt_id", "connection", "trigger", "started_at", "completed_at", "erased", "keys_destroyed", "audit", "backup_window_days"],
+  "properties": {
+    "receipt_id": {
+      "type": "string",
+      "pattern": "^urn:brain:[a-z0-9][a-z0-9-]{0,63}:action:.+$"
+    },
+    "connection": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{0,63}$",
+      "description": "The disconnected system's id."
+    },
+    "trigger": {
+      "enum": ["user_disconnect", "peer_revoked", "token_rejected"],
+      "description": "A 401/403 on an outbound call is the other side revoking you: treat it as a disconnect and trigger the same purge, audit and receipt (BP-02 §5.5)."
+    },
+    "started_at": { "type": "string", "format": "date-time" },
+    "completed_at": { "type": "string", "format": "date-time" },
+    "erased": {
+      "type": "object",
+      "required": ["entities", "activities", "edges", "actions", "derived_memories", "journal_rows"],
+      "description": "Per-type counts erased. derived_memories is always an explicit line.",
+      "properties": {
+        "entities": { "type": "integer", "minimum": 0 },
+        "activities": { "type": "integer", "minimum": 0 },
+        "edges": { "type": "integer", "minimum": 0 },
+        "actions": { "type": "integer", "minimum": 0 },
+        "derived_memories": { "type": "integer", "minimum": 0 },
+        "journal_rows": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "keys_destroyed": {
+      "type": "object",
+      "required": ["grant_keys", "tokens_revoked", "at"],
+      "description": "BP-07's cryptographic-forgetting line: grant keys destroyed and tokens revoked, with timestamp. A receipt without it is incomplete (BP-07 §3.6, TCK T-SEC-09).",
+      "properties": {
+        "grant_keys": { "type": "integer", "minimum": 0 },
+        "tokens_revoked": { "type": "integer", "minimum": 0 },
+        "at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "audit": {
+      "type": "object",
+      "required": ["tables_scanned", "rows_remaining"],
+      "description": "The post-purge scan of every provenance-bearing table under the BP-02 §5.1 predicate (source, origin_chain, provenance — applied transitively).",
+      "properties": {
+        "tables_scanned": { "type": "integer", "minimum": 1 },
+        "rows_remaining": { "const": 0, "description": "The result MUST be zero. A non-zero result is not a receipt; it is an incident." }
+      }
+    },
+    "backup_window_days": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "The published backup window (BP-02 §5.6). Any restore from backup replays the forget log and re-passes the audit before serving traffic."
+    }
+  }
+}

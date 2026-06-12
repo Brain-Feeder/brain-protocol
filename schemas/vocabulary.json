@@ -1,0 +1,73 @@
+{
+  "$comment": "Brain Protocol v2 controlled vocabulary (BP-01 §8-§10) plus the subtype→sensitivity starter table (BP-01 §9, semantics in BP-07 §2.3). This is a data document, not a JSON Schema. Mapping tables (BP-01 §11) are the only extension valve; new base terms land by MINOR version through the brain-protocol repository process. Unknown terms received without a mapping pass through opaquely and are never silently aliased.",
+  "vocabulary_version": "2.0",
+  "types": ["entity", "activity", "edge", "action"],
+  "entity_subtypes": [
+    "person", "organisation", "account", "document", "product", "place", "device",
+    "vehicle", "property", "policy", "pet", "goal", "list", "plan",
+    "fact", "authority_policy"
+  ],
+  "activity_subtypes": [
+    "task", "event", "message", "transaction", "reminder", "note", "observation",
+    "status_change", "appointment", "renewal", "job", "plan_step", "goal"
+  ],
+  "edge_predicates": [
+    "owns", "member_of", "works_for", "related_to", "parent_of", "attended",
+    "assigned_to", "blocks", "depends_on", "paid", "mentions",
+    "derived_from", "cares_for", "shares_with", "insured_by", "located_at",
+    "travelling_on", "responsible_for", "child_of", "partner_of", "paid_from",
+    "same_as", "disagreement"
+  ],
+  "action_verbs": {
+    "$comment": "Action verbs (subtype on actions) are not enumerated by the base vocabulary: they are named by the capability they invoke (book, send_message, entity.merge, …) and are validated against the grant matrix (BP-03), not this registry. (BP-01 §10.4)"
+  },
+  "states": {
+    "entity": ["archived"],
+    "activity": ["scheduled", "open", "in_progress", "blocked", "done", "cancelled"],
+    "goal": ["intended", "in_progress", "achieved", "abandoned", "archived"],
+    "action": ["proposed", "confirmed", "executed", "declined", "expired", "needs_human", "relayed", "failed"],
+    "derived_memory": ["active", "superseded", "retracted", "expired"]
+  },
+  "visibility": {
+    "grammar": "private | shared:<scope> | public",
+    "registered_scopes": [
+      { "scope": "partners", "audience": "the owner and their partner(s)", "registers_v01": "partners" },
+      { "scope": "adults", "audience": "all adult members of the space", "registers_v01": "adults" },
+      { "scope": "household", "audience": "every member, children included", "registers_v01": "everyone" }
+    ],
+    "unknown_scope_rule": "A receiver encountering an unknown scope MUST treat the record as private — fail closed, never open (BP-01 §8, CD-6)."
+  },
+  "sensitivity_classes": [
+    { "class": "S0", "name": "Ambient", "wire": "live-query preferred; never stored by the receiver by default" },
+    { "class": "S1", "name": "Household", "wire": "standard grant; JWS-signed batches" },
+    { "class": "S2", "name": "Personal", "wire": "elevated grant cell + step-up confirm + JWE end-to-end" },
+    { "class": "S3", "name": "Sealed / identity", "wire": "never syncs — reference-only pointers cross the wire" }
+  ],
+  "sensitivity_starter": {
+    "$comment": "Starter default by subtype (BP-01 §9). Emitters MAY stamp higher than the default; receivers MAY upgrade and MUST NOT downgrade (BP-07 §2.2). Edges carry no class of their own by subtype: an edge inherits the stricter of its endpoints (BP-01 §5.6).",
+    "S0": ["presence"],
+    "S1": [
+      "person", "organisation", "product", "place", "device", "vehicle", "property",
+      "pet", "goal", "list", "plan", "document",
+      "task", "event", "message", "reminder", "note", "observation",
+      "status_change", "appointment", "renewal", "job", "plan_step"
+    ],
+    "S2": ["account", "policy", "transaction"],
+    "S3": [],
+    "contextual_overrides": [
+      "document defaults S1; clinical documents are S2; identity documents (passport, birth-certificate, account-number payloads) are S3",
+      "observation defaults S1; health observations are S2",
+      "finance aggregates are S2",
+      "credentials and vault items are S3; S3 never syncs — reference-only pointers cross the wire (BP-07 §2.4)"
+    ]
+  },
+  "needs_human_reasons": [
+    { "reason": "consent_required", "meaning": "the exchange crosses an S2/S3 boundary without the required consent or step-up (BP-07)" },
+    { "reason": "low_confidence", "meaning": "entity resolution or extraction below threshold; a human must look" },
+    { "reason": "authority_exceeded", "meaning": "the grant's mode is propose-only and the proposal needs the receiving side's human" },
+    { "reason": "disagreement", "meaning": "the two systems' records conflict and an action depends on which is right" },
+    { "reason": "policy_floor", "meaning": "the authority policy or a protocol floor (BP-08 §6) requires a human regardless" },
+    { "reason": "unknown_vocabulary", "meaning": "semantic dead end — an unmapped subtype or predicate the action depends on (CD-6)" }
+  ],
+  "journal_verbs": ["created", "updated", "completed", "confirmed", "declined", "halted", "unwound", "forgot"]
+}

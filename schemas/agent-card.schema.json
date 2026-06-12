@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://brain-protocol.org/schemas/agent-card.schema.json",
+  "title": "Brain Protocol v2 agent card",
+  "description": "The machine-readable agent card every system publishes at /.well-known/brain-protocol/card.json (BP-03 §2). The card describes the system, never a connection: nothing grant-specific, member-specific or secret appears in it. The published artefact is a JWS (RFC 7515) over the canonical card body, signed with a key listed in identity_keys, alg EdDSA (Ed25519); this schema validates the card body. Unknown card fields MUST be ignored (forward compatibility).",
+  "type": "object",
+  "required": ["card_format", "system_id", "name", "operator", "protocol_versions", "conformance", "identity_keys", "capabilities", "auth", "endpoints"],
+  "properties": {
+    "card_format": { "const": 1, "description": "This schema's version." },
+    "system_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{0,63}$",
+      "description": "Stable, lower-case, globally unique by convention."
+    },
+    "name": { "type": "string", "minLength": 1, "description": "Human-readable name." },
+    "operator": {
+      "type": "object",
+      "required": ["legal_name", "contact", "jurisdiction"],
+      "description": "Who answers for this system.",
+      "properties": {
+        "legal_name": { "type": "string", "minLength": 1 },
+        "contact": { "type": "string", "minLength": 1 },
+        "jurisdiction": { "type": "string", "minLength": 2 }
+      }
+    },
+    "protocol_versions": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+(\\.[0-9]+)?$" },
+      "description": "Descending preference. Peers operate at the highest common version (BP-03 §3.1)."
+    },
+    "vocabulary": {
+      "type": "object",
+      "required": ["base_version"],
+      "description": "MUST for v2 — checked at connect (BP-03 §3.3, CD-6). A connection where either side's terms are neither base-vocabulary nor mapped does not proceed to sync.",
+      "properties": {
+        "base_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+$" },
+        "mapping_table": { "type": "string", "format": "uri", "description": "URL of local-term mappings in the BP-01 §11 format." }
+      }
+    },
+    "conformance": {
+      "type": "object",
+      "required": ["class"],
+      "description": "Class and proof (BP-09).",
+      "properties": {
+        "class": { "enum": ["D", "A", "H"] },
+        "certification": {
+          "type": "object",
+          "required": ["tier"],
+          "properties": {
+            "tier": { "enum": ["self", "verified"], "description": "Per CD-2: Class D self-certifies with published TCK results; Classes A and H, and any S2 capability at any class, require verified certification." },
+            "registry_ref": { "type": "string", "format": "uri" },
+            "last_pass": { "type": "string", "description": "Date of the last green TCK run." },
+            "suite_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" }
+          }
+        }
+      }
+    },
+    "identity_keys": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Long-lived card-signing keys (JWK, Ed25519). Distinct from per-grant keys (BP-03 §4). Rotation: new key published signed by the old one for a ≥ 30-day overlap (BP-03 §2.3.4).",
+      "items": {
+        "type": "object",
+        "required": ["kid", "kty", "crv", "x"],
+        "properties": {
+          "kid": { "type": "string", "minLength": 1 },
+          "kty": { "const": "OKP" },
+          "crv": { "const": "Ed25519" },
+          "x": { "type": "string", "minLength": 1, "description": "Base64url-encoded public key." },
+          "use": { "const": "sig" },
+          "not_after": { "type": "string", "description": "Expiry date; an expired key aborts the connection attempt (BP-03 §2.3.2)." }
+        }
+      }
+    },
+    "capabilities": {
+      "type": "array",
+      "minItems": 1,
+      "description": "What this system offers and consumes. write-direct never appears on a card because it never crosses a boundary (BP-03 §2.2, §5.2). An offer of an S2-ceiling capability at any class requires verified certification (CD-2).",
+      "items": {
+        "type": "object",
+        "required": ["name", "direction", "modes", "sensitivity_ceiling"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1, "pattern": "^[a-z][a-z0-9_.]*$" },
+          "direction": { "enum": ["offer", "consume"], "description": "offer: we serve it; consume: we call yours." },
+          "modes": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": { "enum": ["read", "propose"] }
+          },
+          "sensitivity_ceiling": {
+            "enum": ["S0", "S1", "S2"],
+            "description": "The highest class (BP-07) the capability ever carries. Never S3 — S3 never syncs."
+          }
+        }
+      }
+    },
+    "auth": {
+      "type": "object",
+      "required": ["type"],
+      "description": "Token endpoint set.",
+      "properties": {
+        "type": { "const": "oauth2.1" },
+        "authorize_url": { "type": "string", "format": "uri" },
+        "token_url": { "type": "string", "format": "uri" }
+      }
+    },
+    "endpoints": {
+      "type": "object",
+      "description": "At least one of a2a | mcp (BP-03 §2.2).",
+      "anyOf": [
+        { "required": ["a2a"] },
+        { "required": ["mcp"] }
+      ],
+      "properties": {
+        "a2a": { "type": "string", "format": "uri" },
+        "mcp": { "type": "string", "format": "uri" }
+      }
+    },
+    "limits": {
+      "type": "object",
+      "description": "Declared bounds (SHOULD; BP-02 §6, BP-04). Recommended defaults: 500 records or 1 MiB per batch, 60 requests/minute.",
+      "properties": {
+        "max_batch_records": { "type": "integer", "minimum": 1 },
+        "max_batch_bytes": { "type": "integer", "minimum": 1 },
+        "rate_per_minute": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}
