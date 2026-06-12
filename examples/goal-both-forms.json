@@ -19,10 +19,10 @@
     }
   },
   {
-    "id": "urn:brain:tpms:activity:e7d10f3b-9a48-4c61-b5f2-08c3a6d92e74",
+    "id": "urn:brain:examplefit:activity:e7d10f3b-9a48-4c61-b5f2-08c3a6d92e74",
     "type": "activity",
     "subtype": "goal",
-    "source": "tpms",
+    "source": "examplefit",
     "external_ref": "goals/10k-2026",
     "owner": "mem-7f31",
     "valid_time": "2026-06-01T00:00:00Z",

@@ -444,8 +444,8 @@ goal in both emission forms.
                   "measure": "official race finish time recorded", "horizon": "2026-09-30" } }
 
 // 5b. The same goal — emitted as an activity (the URS framing); receivers accept both
-{ "id": "urn:brain:tpms:activity:e7d10f3b-9a48-4c61-b5f2-08c3a6d92e74",
-  "type": "activity", "subtype": "goal", "source": "tpms",
+{ "id": "urn:brain:examplefit:activity:e7d10f3b-9a48-4c61-b5f2-08c3a6d92e74",
+  "type": "activity", "subtype": "goal", "source": "examplefit",
   "external_ref": "goals/10k-2026", "owner": "mem-7f31",
   "valid_time": "2026-06-01T00:00:00Z", "system_time": "2026-06-01T08:00:00Z",
   "interval": { "start": "2026-06-01T00:00:00Z", "end": "2026-09-30T23:59:59Z" },
@@ -492,6 +492,6 @@ or removes it; re-syncing the unchanged entity creates no second activity.
 ## 17. Settled questions and returns
 
 Settled by this draft (per the council's "open to the writer" list): the subtype→sensitivity
-starter table (§9, to be co-ratified with BP-07 and TPMS); the initial visibility scope registry
+starter table (§9, to be co-ratified with BP-07 and an early integrating system); the initial visibility scope registry
 (§8); canonical JSON serialisation — omit-not-null, unknown-field pass-through, JCS only for
 signing (§14); interval flattening (§6). Nothing in this draft is returned to the council.
