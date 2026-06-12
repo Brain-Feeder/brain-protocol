@@ -1,0 +1,23 @@
+{
+  "name": "brain-tck",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Brain Protocol v2 Technology Compatibility Kit (Class D suite). Connects to a system under test as a peer plus a thin adapter, seeds, attacks, and asserts; emits machine-readable results (BP-09).",
+  "type": "module",
+  "bin": { "brain-tck": "./dist/cli.js" },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "run": "tsx src/cli.ts",
+    "test": "tsx src/cli.ts run --class D --target http://localhost:8080 --adapter ../reference/adapter.ts --out results.json"
+  },
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "jose": "^5.9.6"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3",
+    "@types/node": "^22.9.0"
+  }
+}

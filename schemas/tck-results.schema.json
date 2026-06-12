@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://brain-protocol.org/schemas/tck-results.schema.json",
+  "title": "Brain Protocol v2 TCK results",
+  "description": "The machine-readable results a conformance run emits (BP-09 §4.1 results_url, BUILD-BRIEF §3.4). Published at a stable URL for self-certification; a registry entry references it via tck.results_url. A class passes only when every test marked for it passes (BP-09 §2.1): verdict is 'pass' iff failed == 0 and skipped == 0.",
+  "type": "object",
+  "required": ["results_format", "suite", "suite_version", "class", "started_at", "completed_at", "environment", "summary", "verdict", "tests"],
+  "properties": {
+    "results_format": { "const": 1 },
+    "suite": { "const": "brain-protocol-tck" },
+    "suite_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "class": { "enum": ["D", "A", "H"], "description": "The conformance class this run proves (BP-09 §2.10)." },
+    "target": { "type": ["string", "null"], "description": "Base URL of the system under test (wire suites)." },
+    "adapter": { "type": ["string", "null"], "description": "Path to the implementer's adapter module (data-layer suites)." },
+    "started_at": { "type": "string", "format": "date-time" },
+    "completed_at": { "type": "string", "format": "date-time" },
+    "environment": {
+      "type": "object",
+      "required": ["node", "os"],
+      "properties": {
+        "node": { "type": "string" },
+        "os": { "type": "string" }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["total", "passed", "failed", "skipped"],
+      "properties": {
+        "total": { "type": "integer", "minimum": 0 },
+        "passed": { "type": "integer", "minimum": 0 },
+        "failed": { "type": "integer", "minimum": 0 },
+        "skipped": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "verdict": { "enum": ["pass", "fail"], "description": "pass iff failed == 0 and skipped == 0." },
+    "tests": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "suite", "class", "name", "clause", "status", "message", "evidence", "duration_ms"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^T-[A-Z]+-[0-9]+$", "description": "Stable test id matching the BP-09 §2 catalogue exactly." },
+          "suite": { "type": "string", "description": "ENV | DAT | HSK | COM | SEC | GAT | REF." },
+          "class": { "enum": ["D", "A", "H"] },
+          "name": { "type": "string", "minLength": 1 },
+          "clause": { "type": "string", "minLength": 1, "description": "The spec clause this test enforces." },
+          "status": { "enum": ["pass", "fail", "skip"] },
+          "message": { "type": "string", "description": "The assertion message; names the spec clause on failure (BUILD-BRIEF §3.3)." },
+          "evidence": {
+            "type": "array",
+            "description": "Evidence pointers: what was seeded, attacked, and observed.",
+            "items": {
+              "type": "object",
+              "required": ["label"],
+              "properties": {
+                "label": { "type": "string" },
+                "detail": {}
+              }
+            }
+          },
+          "duration_ms": { "type": "number", "minimum": 0 }
+        }
+      }
+    }
+  }
+}
