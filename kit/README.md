@@ -31,7 +31,12 @@ npx tsx src/cli.ts run --class D \
 
 Flags: `--class D`, `--target <base-url>` (the wire surface), `--adapter <file>` (the data-layer
 surface), `--out <file>` (results), `--only T-ENV,T-DAT` (run a subset), `--strict` (fail instead
-of skip when a surface is missing).
+of skip when a surface is missing), `--system-id <id>` (override the target's own system id).
+
+The kit never assumes your system's name. It learns your `system_id` from your verified agent card
+at the start of a run (the loop-guard test, T-COM-02, reflects your own id back at you to prove you
+reject echoes). If your card cannot be fetched, pass `--system-id`. A system honestly named anything
+must certify — and CI proves it by renaming the reference and re-passing 46/46.
 
 ## The two surfaces
 

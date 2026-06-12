@@ -10,6 +10,7 @@ import { pathToFileURL } from 'node:url';
 import { resolve, isAbsolute } from 'node:path';
 import type { Adapter, AdapterFactory } from './types.js';
 import { KitPeer } from './peer/kit-peer.js';
+import { WireClient } from './peer/wire.js';
 import { runSuite, type RunOptions } from './harness.js';
 import { buildResults, writeResults, type TestResult } from './results.js';
 
@@ -32,10 +33,11 @@ interface Args {
   out: string | null;
   only: string[];
   strict: boolean;
+  systemId: string | null;
 }
 
 function parseArgs(argv: string[]): Args {
-  const a: Args = { cmd: argv[0] ?? 'run', cls: 'D', target: null, adapter: null, out: null, only: [], strict: false };
+  const a: Args = { cmd: argv[0] ?? 'run', cls: 'D', target: null, adapter: null, out: null, only: [], strict: false, systemId: null };
   for (let i = 1; i < argv.length; i++) {
     const k = argv[i];
     const v = argv[i + 1];
@@ -45,6 +47,7 @@ function parseArgs(argv: string[]): Args {
       case '--adapter': a.adapter = v; i++; break;
       case '--out': a.out = v; i++; break;
       case '--only': a.only = v.split(',').map((s) => s.trim()).filter(Boolean); i++; break;
+      case '--system-id': a.systemId = v; i++; break;
       case '--strict': a.strict = true; break;
       default: if (k.startsWith('--')) { console.error(`unknown flag ${k}`); }
     }
@@ -86,11 +89,21 @@ async function main(): Promise<void> {
   if (args.adapter) adapter = await loadAdapter(args.adapter);
   const peer = await KitPeer.create();
 
+  // Learn the target's own system id — the kit never assumes the target's name. Precedence:
+  // an explicit --system-id, else the id from the target's verified agent card (BP-03 §2.3).
+  // (TPMS friction log, 2026-06-12: a system honestly named anything must still certify.)
+  let targetSystemId: string | null = args.systemId;
+  if (!targetSystemId && args.target) {
+    const card = await new WireClient(args.target).fetchAndVerifyCard();
+    if (card.ok && card.body?.system_id) targetSystemId = card.body.system_id as string;
+    else console.error(C.yellow(`  warning: could not learn the target's system id from its card (${card.reason ?? 'no system_id'}); pass --system-id`));
+  }
+
   console.log(C.bold(`\nBrain Protocol TCK ${SUITE_VERSION} — Class ${args.cls}`));
-  console.log(C.dim(`target: ${args.target ?? '(none)'}  adapter: ${args.adapter ?? '(none)'}  ${args.only.length ? 'only: ' + args.only.join(',') : ''}\n`));
+  console.log(C.dim(`target: ${args.target ?? '(none)'}  system-id: ${targetSystemId ?? '(none)'}  adapter: ${args.adapter ?? '(none)'}  ${args.only.length ? 'only: ' + args.only.join(',') : ''}\n`));
 
   const opts: RunOptions = {
-    cls: args.cls, adapter, peer, target: args.target, strict: args.strict, only: args.only,
+    cls: args.cls, adapter, peer, target: args.target, targetSystemId, strict: args.strict, only: args.only,
     onResult: (r) => {
       const line = `  ${badge(r.status)}  ${r.id.padEnd(9)} ${r.name}`;
       console.log(line);

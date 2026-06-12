@@ -30,6 +30,11 @@ jobs:
       - name: Run the Class D suite against the reference (46/46)
         run: bash run-conformance.sh --out kit/results.json
 
+      - name: Prove the kit is not coupled to the reference's name (rename + re-run)
+        # The kit must learn the target's id from its card, never assume it (TPMS friction log).
+        # Renaming the reference and re-passing 46/46 guards against that coupling regressing.
+        run: BRAIN_SYSTEM_ID=renamed-pipe PORT=8090 bash run-conformance.sh --out kit/results-renamed.json
+
       - name: Prove the kit catches a broken law (T-REF-02)
         run: cd reference && bash break-a-law.sh
 
@@ -38,4 +43,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: tck-results
-          path: kit/results.json
+          path: kit/results*.json

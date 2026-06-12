@@ -46,11 +46,15 @@ defineTest({
   name: 'loop-guard echo test', clause: 'BP-04 §4.3 / AC-04.2 (T-COM-02)',
   async run(ctx) {
     const w = wire(ctx); resetUuids();
+    // The echo is the TARGET's own id reflected back — learned from its card, never assumed
+    // (TPMS friction log, 2026-06-12). A system honestly named anything must pass this test.
+    const sid = ctx.targetSystemId;
+    if (!sid) return ctx.skip('could not determine the target system id (its card carried no system_id, and no --system-id was given)');
     await w.handshake({ matrix: [CELL] });
     // own id in chain.
-    const echoChain = validPerson({ id: urn('garagebrain', 'entity'), external_ref: 'e/chain', owner: 'mem-a', origin_chain: ['garagebrain', 'brain-reference'] });
+    const echoChain = validPerson({ id: urn('garagebrain', 'entity'), external_ref: 'e/chain', owner: 'mem-a', origin_chain: ['garagebrain', sid] });
     // claims the target as its source.
-    const echoSource = validPerson({ id: urn('brain-reference', 'entity'), source: 'brain-reference', external_ref: 'e/src', owner: 'mem-a' });
+    const echoSource = validPerson({ id: urn(sid, 'entity'), source: sid, external_ref: 'e/src', owner: 'mem-a' });
     const r1 = await w.call('records.ingest', { records: [echoChain] });
     const r2 = await w.call('records.ingest', { records: [echoSource] });
     ctx.note('echo', { chain: r1.body?.error?.code, source: r2.body?.error?.code });

@@ -11,6 +11,9 @@ export interface TestContext {
   adapter: Adapter | null;
   peer: KitPeer;
   target: string | null;
+  /** the system-under-test's own id, learned from its verified card (or a --system-id override).
+   *  The kit never assumes the target's name (TPMS friction log, 2026-06-12). */
+  targetSystemId: string | null;
   evidence: Evidence[];
   /** record an evidence pointer (what was seeded/attacked/observed). */
   note(label: string, detail?: unknown): void;
@@ -80,6 +83,8 @@ export interface RunOptions {
   adapter: Adapter | null;
   peer: KitPeer;
   target: string | null;
+  /** the target's own id (from its card or a --system-id override); null when no target. */
+  targetSystemId?: string | null;
   /** when true, a test needing an absent surface fails rather than skips (strict done check). */
   strict?: boolean;
   /** run only ids matching these prefixes (e.g. ['T-ENV']) — for per-wave runs. */
@@ -109,6 +114,7 @@ export async function runSuite(opts: RunOptions): Promise<TestResult[]> {
       adapter: opts.adapter,
       peer: opts.peer,
       target: opts.target,
+      targetSystemId: opts.targetSystemId ?? null,
       evidence,
       note: (label, detail) => { evidence.push({ label, detail }); },
       check: (cond, clause, message) => { if (!cond) throw new TckFailure(clause, message); },

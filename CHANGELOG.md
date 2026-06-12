@@ -5,6 +5,16 @@ MINOR (forward-compatible), breaking = MAJOR, errata = PATCH.
 
 ## Unreleased
 
+- **Stranger-test fixes from the first partner integration (2026-06-12).** A partner team built a
+  Class D provider from the repository alone and passed 46/46 without reading `reference/` — and
+  surfaced two repo-side defects against the "stranger certifies with zero out-of-band questions"
+  criterion (BUILD-BRIEF §1). Fixed: (1) the kit no longer hard-codes the system-under-test's id —
+  it learns the target's `system_id` from its verified agent card (with a `--system-id` override),
+  and the reference reads its own id from `BRAIN_SYSTEM_ID`; a renamed-reference run is now a CI
+  step so the coupling cannot regress (a system honestly named anything certifies). (2) Repo
+  visibility — see the open release blocker below. Test-fixture and example system ids were also
+  made partner-neutral.
+
 - **Class D conformance kit + reference pipe (2026-06-12).** The executable TCK
   (`kit/`) and a reference Class D data provider (`reference/`) now exist and pass
   **46/46** of the BP-09 §2.10 Class D suite from a clean clone (`./run-conformance.sh`).

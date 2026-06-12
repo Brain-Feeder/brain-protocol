@@ -25,7 +25,9 @@ npx tsx src/cli.ts run --class D --target http://localhost:8080 --adapter ../ref
 ```
 
 Or, from the repo root, the whole thing in one command: `./run-conformance.sh`. Expected result:
-**46/46 pass, verdict PASS**. No out-of-band question is needed beyond fingerprint verification
+**46/46 pass, verdict PASS**. The reference reads its own system id from `BRAIN_SYSTEM_ID`
+(default `brain-reference`); `BRAIN_SYSTEM_ID=anything ./run-conformance.sh` still passes 46/46,
+which is how CI proves the kit is not coupled to any particular system's name. No out-of-band question is needed beyond fingerprint verification
 (BP-03 §2.3.3, deliberately out-of-band). Postgres is embedded (`embedded-postgres`), so there is
 no external database to provision — the pipe brings up its own and tears it down on exit.
 

@@ -25,6 +25,9 @@ interface Token { hash: string; grant_id: string; expires_at: number; }
 const SENS_ORDER: Record<string, number> = { S0: 0, S1: 1, S2: 2, S3: 3 };
 // T-REF-02 (AC-09.2): deliberately break one wire law so the kit can be proven to catch it.
 const BREAK = process.env.BRAIN_BREAK ?? '';
+// A system's own id is its choice, not the kit's (TPMS friction log, 2026-06-12). The reference
+// reads it from config so the suite can be proven to pass against any honestly-named system.
+const SYSTEM_ID = process.env.BRAIN_SYSTEM_ID ?? 'brain-reference';
 
 export interface ServerHandle { url: string; port: number; pipe: Pipe; identityFingerprint: string; close: () => Promise<void>; }
 
@@ -50,7 +53,7 @@ export async function startServer(opts: { port?: number } = {}): Promise<ServerH
   const NONCE_WINDOW_MS = 5 * 60 * 1000;
 
   const cardBody = {
-    card_format: 1, system_id: 'brain-reference', name: 'Brain Protocol Reference Pipe',
+    card_format: 1, system_id: SYSTEM_ID, name: 'Brain Protocol Reference Pipe',
     operator: { legal_name: 'Brain Protocol', contact: 'ref@brain-protocol.example', jurisdiction: 'GB' },
     protocol_versions: ['2.0', '0.1'], vocabulary: { base_version: '2.0' },
     conformance: { class: 'D', certification: { tier: 'self', suite_version: '2.0.0' } },
@@ -319,7 +322,7 @@ export async function startServer(opts: { port?: number } = {}): Promise<ServerH
         // Loop guard (BP-04 §4): echo / hop rejection. BREAK 'loopguard' lets echoes through.
         const chain = (r.origin_chain ?? []) as string[];
         if (BREAK !== 'loopguard') {
-          if (chain.includes('brain-reference') || r.source === 'brain-reference') return err(res, 409, 'echo_rejected', 'own id in chain or claimed as source');
+          if (chain.includes(SYSTEM_ID) || r.source === SYSTEM_ID) return err(res, 409, 'echo_rejected', 'own id in chain or claimed as source');
           if (chain.length > 3) return err(res, 409, 'hop_limit_exceeded', 'chain longer than 3 hops');
         }
         // S3 never travels (BP-07 §2.4, T-SEC-01). BREAK 's3' lets S3 onto the wire.
