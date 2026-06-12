@@ -65,9 +65,13 @@ The specifications live in [`v2/`](v2/) — start with the
 Machine-readable artefacts derived from the specs:
 
 - [`schemas/`](schemas/) — JSON Schema (draft 2020-12) for the record envelope,
-  the Action, the agent card, the grant document, and the forget receipt, plus
-  the controlled vocabulary as data ([`vocabulary.json`](schemas/vocabulary.json)).
+  the Action, the agent card, the grant document, the forget receipt, and the
+  TCK results, plus the controlled vocabulary as data
+  ([`vocabulary.json`](schemas/vocabulary.json)).
 - [`examples/`](examples/) — the specs' worked JSON as standalone files.
+- [`kit/`](kit/) — the executable Class D TCK (46 tests, all green).
+- [`reference/`](reference/) — the reference Class D pipe the kit proves itself
+  against (Postgres + RLS).
 
 ## Conformance classes
 
@@ -88,6 +92,35 @@ shakes hands.
 Any system exposing an S2 (personal-grade) capability at any class requires
 verified certification.
 
+## The conformance kit and reference pipe (Class D — implemented)
+
+The Class D suite is not a plan; it is executable and green. The repository
+ships two working artefacts:
+
+- [`kit/`](kit/) — the **TCK**, a TypeScript/Node harness that connects to a
+  system under test as a peer and through a thin adapter, seeds, attacks, and
+  asserts, then writes machine-readable results
+  ([`schemas/tck-results.schema.json`](schemas/tck-results.schema.json)). All 46
+  Class D tests are implemented; every id matches the BP-09 §2 catalogue and
+  every assertion names its spec clause. See [`kit/README.md`](kit/README.md)
+  and the frozen [`kit/ADAPTER.md`](kit/ADAPTER.md).
+- [`reference/`](reference/) — a deliberately small **reference Class D pipe**
+  (Postgres + row-level security, no AI) that passes the suite from a clean
+  start (T-REF-01). It is both the kit's own proof and the best onboarding
+  artefact a partner gets; [`reference/BUILD-ORDER.md`](reference/BUILD-ORDER.md)
+  walks the BP-02 §8 checklist to the exact code.
+
+From a clean clone, the whole run is one command:
+
+```bash
+./run-conformance.sh          # → 46/46 pass, results in kit/results.json
+```
+
+To prove the kit is a real gate, [`reference/break-a-law.sh`](reference/break-a-law.sh)
+deliberately breaks one law per spec and confirms the matching suite goes red
+(T-REF-02). CI runs both on every push
+([`.github/workflows/conformance.yml`](.github/workflows/conformance.yml)).
+
 ## Quickstart — you have a system with data
 
 1. Read [BP-01](v2/BP-01-DATA-MODEL.md) — the four primitives and the record
@@ -100,17 +133,23 @@ verified certification.
    subtypes from [`schemas/vocabulary.json`](schemas/vocabulary.json). The
    [`examples/`](examples/) show what conformant records look like.
 4. Run the **Class D checklist** (BP-02 §8) and then the Class D TCK suite
-   (BP-09 §2) in CI. Green is the precondition for connecting to anything you
-   don't control.
+   (BP-09 §2) in CI — `kit/` is the runnable suite, `reference/` is a worked
+   example to copy from. Green is the precondition for connecting to anything
+   you don't control.
 
-If it's taking longer than a day, re-read BP-02 before writing more code.
+If it's taking longer than a day, re-read BP-02 before writing more code — or
+read [`reference/`](reference/), which does the whole Class D job in an
+afternoon's worth of code.
 
 ## Status
 
 **v2, draft 0.1 — draft-for-ratification.** Every spec is written and
-council-shaped; the suite is now **seeking ratification partners**: teams who
-will implement a class, run the TCK, and feed reality back into the drafts
-before v2.0.0 is tagged. If that could be you, open an issue.
+council-shaped, and the **Class D conformance kit and reference pipe are built
+and green (46/46)** — the suite is executable, not aspirational. It is now
+**seeking ratification partners**: teams who will implement a class, run the
+TCK, and feed reality back into the drafts before v2.0.0 is tagged. The Class A
+and H suites, the injection corpus, and the registry machinery are the next
+build phases. If that could be you, open an issue.
 
 v0.1 (the single-document protocol and its reference package) remains a valid
 peer via negotiation; its material is preserved under [`archive/`](archive/).

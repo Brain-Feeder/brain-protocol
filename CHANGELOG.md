@@ -3,6 +3,22 @@
 All notable changes. Semver, one suite train (`MAJOR.MINOR.PATCH`). Additive =
 MINOR (forward-compatible), breaking = MAJOR, errata = PATCH.
 
+## Unreleased
+
+- **Class D conformance kit + reference pipe (2026-06-12).** The executable TCK
+  (`kit/`) and a reference Class D data provider (`reference/`) now exist and pass
+  **46/46** of the BP-09 §2.10 Class D suite from a clean clone (`./run-conformance.sh`).
+  The kit tests both surfaces the brief calls for — wire-reachable behaviour over real
+  A2A/MCP HTTP against a target, and the data-layer laws through a thin frozen adapter
+  (`kit/ADAPTER.md`) — with Ed25519 JWS proof-of-possession, X25519/A256GCM JWE, and a
+  machine-readable results file (`schemas/tck-results.schema.json`, BP-09 §4.1). The
+  reference is Postgres + row-level security with the BP-02 §8 laws and the BP-03/BP-04
+  serve obligations; `reference/BUILD-ORDER.md` maps each checklist point to its code.
+  `reference/break-a-law.sh` proves the kit catches a broken law per spec (T-REF-02), and
+  CI runs the suite and the break-a-law proof on every push. Class A/H suites, the
+  ≥50-case injection corpus, the registry, and BP-10's T-HIS/T-DEC remain out of scope
+  for this phase (test ids leave room).
+
 ## Unreleased: targets 2.1.0
 
 - **BP-10: Event Ledger & Decisions** (draft 0.1, for council review, 2026-06-12): the
