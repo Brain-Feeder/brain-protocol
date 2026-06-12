@@ -9,6 +9,7 @@
     "results_format": { "const": 1 },
     "suite": { "const": "brain-protocol-tck" },
     "suite_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "kit_commit": { "type": "string", "description": "Exact kit build (git short hash, or 'unknown' outside a checkout) so published results cite a reproducible build until tagged releases exist. Cite as: suite <suite_version> (kit commit <kit_commit>)." },
     "class": { "enum": ["D", "A", "H"], "description": "The conformance class this run proves (BP-09 §2.10)." },
     "target": { "type": ["string", "null"], "description": "Base URL of the system under test (wire suites)." },
     "adapter": { "type": ["string", "null"], "description": "Path to the implementer's adapter module (data-layer suites)." },

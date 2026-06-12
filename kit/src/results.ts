@@ -6,6 +6,21 @@
 
 import { writeFileSync } from 'node:fs';
 import { release, arch, platform } from 'node:os';
+import { execFileSync } from 'node:child_process';
+import { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+/** The kit's own git commit, so published results cite an exact build until tagged releases
+ *  exist (partner request, 2026-06-12). Falls back to 'unknown' outside a git checkout. */
+export function kitCommit(): string {
+  try {
+    return execFileSync('git', ['rev-parse', '--short', 'HEAD'], {
+      cwd: dirname(fileURLToPath(import.meta.url)), encoding: 'utf8',
+    }).trim();
+  } catch {
+    return 'unknown';
+  }
+}
 
 export type Status = 'pass' | 'fail' | 'skip';
 
@@ -32,6 +47,8 @@ export interface ResultsFile {
   results_format: 1;
   suite: 'brain-protocol-tck';
   suite_version: string;
+  /** exact kit build (git short hash) until tagged releases exist. */
+  kit_commit: string;
   class: 'D' | 'A' | 'H';
   target: string | null;
   adapter: string | null;
@@ -58,6 +75,7 @@ export function buildResults(args: {
     results_format: 1,
     suite: 'brain-protocol-tck',
     suite_version: args.suiteVersion,
+    kit_commit: kitCommit(),
     class: args.cls,
     target: args.target,
     adapter: args.adapter,

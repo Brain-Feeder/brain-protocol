@@ -5,6 +5,11 @@ MINOR (forward-compatible), breaking = MAJOR, errata = PATCH.
 
 ## Unreleased
 
+- **Suite 2.0.1 (PATCH, 2026-06-12).** Carries the system-id fix below (a coupling removed, no
+  test semantics changed — PATCH per BP-09 §5.2). `results.json` now also records `kit_commit`
+  (the kit's git short hash) so published results cite an exact, reproducible build until tagged
+  releases exist; cite as "suite 2.0.1 (kit commit <hash>)".
+
 - **Stranger-test fixes from the first partner integration (2026-06-12).** A partner team built a
   Class D provider from the repository alone and passed 46/46 without reading `reference/` — and
   surfaced two repo-side defects against the "stranger certifies with zero out-of-band questions"

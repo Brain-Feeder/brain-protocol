@@ -23,7 +23,9 @@ import './suites/sec.js';
 import './suites/gat.js';
 import './suites/ref.js';
 
-const SUITE_VERSION = '2.0.0';
+// 2.0.1 (PATCH, BP-09 §5.2): the kit learns the target's system id from its verified card
+// instead of assuming it — a coupling removed, no test semantics changed.
+const SUITE_VERSION = '2.0.1';
 
 interface Args {
   cmd: string;
