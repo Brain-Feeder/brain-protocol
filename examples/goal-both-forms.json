@@ -1,0 +1,41 @@
+[
+  {
+    "id": "urn:brain:brainfeeder:entity:b2c47a90-1f6e-4d2b-8a3c-5e90d1f47b16",
+    "type": "entity",
+    "subtype": "goal",
+    "source": "manual",
+    "external_ref": "goal/run-10k",
+    "owner": "mem-7f31",
+    "valid_time": "2026-06-01T00:00:00Z",
+    "system_time": "2026-06-01T08:00:00Z",
+    "state": "in_progress",
+    "visibility": "private",
+    "sensitivity": "S1",
+    "attributes": {
+      "name": "Run a 10k",
+      "target": "complete a 10k race",
+      "measure": "official race finish time recorded",
+      "horizon": "2026-09-30"
+    }
+  },
+  {
+    "id": "urn:brain:tpms:activity:e7d10f3b-9a48-4c61-b5f2-08c3a6d92e74",
+    "type": "activity",
+    "subtype": "goal",
+    "source": "tpms",
+    "external_ref": "goals/10k-2026",
+    "owner": "mem-7f31",
+    "valid_time": "2026-06-01T00:00:00Z",
+    "system_time": "2026-06-01T08:00:00Z",
+    "interval": { "start": "2026-06-01T00:00:00Z", "end": "2026-09-30T23:59:59Z" },
+    "state": "in_progress",
+    "visibility": "private",
+    "sensitivity": "S1",
+    "attributes": {
+      "title": "Run a 10k",
+      "target": "complete a 10k race",
+      "measure": "official race finish time recorded",
+      "horizon": "2026-09-30"
+    }
+  }
+]

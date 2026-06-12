@@ -1,0 +1,71 @@
+{
+  "_description": "The clinic connection worked example from BP-03 §9. Oakfield Clinic and the McCormack Brainfeeder hub connect; two grants result, one issued by each side. Brainfeeder may propose bookings (never write the clinic's diary) and read confirmed appointments back; the clinic may propose reports into Peter's review gate; health summaries are an S2 read under elevated consent. Key material and signatures are placeholders (truncated in the spec); the X25519 encryption halves are included because S2 cells exist (BP-03 §5.3).",
+  "grants": [
+    {
+      "grant_format": 1,
+      "grant_id": "urn:brain:clinic-oakfield:grant:a1b2c3d4-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
+      "grantor": "clinic-oakfield",
+      "grantee": "brainfeeder-mccormack",
+      "protocol_version": "2.0",
+      "issued_at": "2026-06-11T10:00:00Z",
+      "expires_at": "2026-09-09T10:00:00Z",
+      "member_lens": "patient-4471",
+      "visibility_ceiling": "shared:practice",
+      "matrix": [
+        { "capability": "appointment.book", "direction": "offer", "mode": "propose", "sensitivity_ceiling": "S1" },
+        { "capability": "appointment.read", "direction": "offer", "mode": "read", "sensitivity_ceiling": "S1" },
+        { "capability": "health_record.summary", "direction": "offer", "mode": "read", "sensitivity_ceiling": "S2" }
+      ],
+      "elevated": {
+        "s2_capabilities": ["health_record.summary"],
+        "consented_by": "patient-4471",
+        "consented_at": "2026-06-11T10:00:00Z",
+        "step_up": "per_capability_first_use"
+      },
+      "keys": {
+        "grantor_public": { "kid": "g-cl-1", "kty": "OKP", "crv": "Ed25519", "x": "JrQo6mLkV0eXAMPLEoNLYn0tRWFsS2V5QmFzZTY0dXJs" },
+        "grantee_public": { "kid": "g-bf-1", "kty": "OKP", "crv": "Ed25519", "x": "Xp3dF9wTeXAMPLEoNLYn0tRWFsS2V5QmFzZTY0dXJs0A" },
+        "grantor_encryption_public": { "kid": "g-cl-1e", "kty": "OKP", "crv": "X25519", "x": "c2VhbGVkRXhhbXBsZU9ubHlOb3RBUmVhbEtleUJhc2U2NA" },
+        "grantee_encryption_public": { "kid": "g-bf-1e", "kty": "OKP", "crv": "X25519", "x": "ZW5jcnlwdEV4YW1wbGVPbmx5Tm90QVJlYWxLZXlCYXNlNg" },
+        "rotation_days": 90
+      },
+      "action_execute": "dark",
+      "signatures": {
+        "grantor": "eyJhbGciOiJFZERTQSJ9.PLACEHOLDER-detached-JWS-grantor",
+        "grantee": "eyJhbGciOiJFZERTQSJ9.PLACEHOLDER-detached-JWS-grantee"
+      }
+    },
+    {
+      "grant_format": 1,
+      "grant_id": "urn:brain:brainfeeder-mccormack:grant:c3d4e5f6-7a8b-4c9d-8e0f-1a2b3c4d5e6f",
+      "grantor": "brainfeeder-mccormack",
+      "grantee": "clinic-oakfield",
+      "protocol_version": "2.0",
+      "issued_at": "2026-06-11T10:00:00Z",
+      "expires_at": "2026-09-09T10:00:00Z",
+      "member_lens": "mem-7f31",
+      "visibility_ceiling": "private",
+      "matrix": [
+        { "capability": "report.submit", "direction": "offer", "mode": "propose", "sensitivity_ceiling": "S2" }
+      ],
+      "elevated": {
+        "s2_capabilities": ["report.submit"],
+        "consented_by": "mem-7f31",
+        "consented_at": "2026-06-11T10:00:00Z",
+        "step_up": "per_capability_first_use"
+      },
+      "keys": {
+        "grantor_public": { "kid": "g-bf-2", "kty": "OKP", "crv": "Ed25519", "x": "Qm9keUV4YW1wbGVPbmx5Tm90QVJlYWxLZXlCYXNlNjR1cmw" },
+        "grantee_public": { "kid": "g-cl-2", "kty": "OKP", "crv": "Ed25519", "x": "R3JhbnRFeGFtcGxlT25seU5vdEFSZWFsS2V5QmFzZTY0dXJs" },
+        "grantor_encryption_public": { "kid": "g-bf-2e", "kty": "OKP", "crv": "X25519", "x": "U2Vjb25kRXhhbXBsZU9ubHlOb3RBUmVhbEtleUJhc2U2NA" },
+        "grantee_encryption_public": { "kid": "g-cl-2e", "kty": "OKP", "crv": "X25519", "x": "Rm91cnRoRXhhbXBsZU9ubHlOb3RBUmVhbEtleUJhc2U2NA" },
+        "rotation_days": 90
+      },
+      "action_execute": "dark",
+      "signatures": {
+        "grantor": "eyJhbGciOiJFZERTQSJ9.PLACEHOLDER-detached-JWS-grantor",
+        "grantee": "eyJhbGciOiJFZERTQSJ9.PLACEHOLDER-detached-JWS-grantee"
+      }
+    }
+  ]
+}

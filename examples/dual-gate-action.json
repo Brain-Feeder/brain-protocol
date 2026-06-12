@@ -1,0 +1,72 @@
+{
+  "_description": "The dual-gate booking from BP-08 §4.2, end to end. Brainfeeder (the family hub) books a check-up at Oakfield Clinic under the BP-03 §9 connection. Emma is a child, so gate g-1 goes to her guardian (the BP-08 §6 floor); gate g-2 is the clinic's own human. Execution occurs only when ALL gates are confirmed. Had reception counter-offered a different slot, the payload change would have reverted g-1 to pending and Peter would have been re-asked.",
+  "stages": [
+    {
+      "step": 1,
+      "note": "Brainfeeder's agent drafts — after consulting the authority policy (BP-08 §5): 'book' is ask.",
+      "action": {
+        "id": "urn:brain:brainfeeder-mccormack:action:f59d3b27-816c-4a40-9e12-7c4a85d0b3e1",
+        "type": "action",
+        "subtype": "book",
+        "summary": "Book Emma's check-up at Oakfield Clinic, Tue 23 Jun 2026 09:30.",
+        "payload": {
+          "capability": "appointment.book",
+          "slot": "2026-06-23T09:30:00+01:00",
+          "patient_ref": "mem-3a91",
+          "practitioner": "any",
+          "duration_min": 20
+        },
+        "payload_hash": "sha256:9c4f1e02ab44d1c0e7b3a6985f2d8c1e0a7b4f3d2c1e0a9b8c7d6e5f4a3b2c1d",
+        "requires_confirm": true,
+        "state": "proposed",
+        "gates": [
+          { "gate_id": "g-1", "space": "brainfeeder-mccormack:household", "addressed_to": "mem-7f31", "role": "guardian", "state": "pending" },
+          { "gate_id": "g-2", "space": "clinic-oakfield", "addressed_to": "staff-m.patel", "state": "pending" }
+        ],
+        "proposed_by": "agent:brainfeeder-mccormack",
+        "expires_at": "2026-06-19T08:41:17Z",
+        "sensitivity": "S1",
+        "visibility": "shared:adults",
+        "owner": "mem-3a91",
+        "actor": "agent:brainfeeder-mccormack",
+        "source": "brainfeeder-mccormack",
+        "external_ref": "action/20294",
+        "origin_chain": ["brainfeeder-mccormack"],
+        "valid_time": "2026-06-12T08:39:02Z",
+        "system_time": "2026-06-12T08:39:02Z"
+      }
+    },
+    {
+      "step": 2,
+      "note": "Peter confirms gate g-1 in his own hub; the BP-08 §2.2 journal entry is recorded. Envelope now: g-1 confirmed, g-2 pending → state remains 'proposed'; nothing executes."
+    },
+    {
+      "step": 3,
+      "note": "Brainfeeder's SERVER (never a client) relays the action to the clinic's action.execute. The clinic validates the envelope, checks the grant cell, and parks it for its own human.",
+      "patch": {
+        "state": "needs_human",
+        "needs_human": {
+          "reason": "authority_exceeded",
+          "addressed_to": "staff-m.patel",
+          "explanation": "External booking request for Tue 23 Jun 09:30 — accept the slot?",
+          "expires_at": "2026-06-19T08:41:17Z"
+        }
+      }
+    },
+    {
+      "step": 4,
+      "note": "Reception confirms g-2 in the clinic's gate (their journal records it). All gates confirmed → the clinic executes under its own rules, idempotency key honoured.",
+      "patch": {
+        "state": "executed",
+        "result": {
+          "appointment_ref": "clinic/appt/88412",
+          "slot": "2026-06-23T09:30:00+01:00"
+        }
+      }
+    },
+    {
+      "step": 5,
+      "note": "Both sides journal the outcome. The confirmed appointment later syncs back to Brainfeeder as an S1 activity under appointment.read — the loop closes through data, not trust."
+    }
+  ]
+}

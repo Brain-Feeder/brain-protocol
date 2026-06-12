@@ -1,0 +1,25 @@
+{
+  "receipt_id": "urn:brain:ourhub:action:0e3c7b9a-2d41-4f5e-8b6c-7a9d0e1f2a3b",
+  "connection": "garagebrain",
+  "trigger": "user_disconnect",
+  "started_at": "2026-06-11T10:02:11Z",
+  "completed_at": "2026-06-11T10:02:14Z",
+  "erased": {
+    "entities": 37,
+    "activities": 214,
+    "edges": 51,
+    "actions": 4,
+    "derived_memories": 12,
+    "journal_rows": 96
+  },
+  "keys_destroyed": {
+    "grant_keys": 2,
+    "tokens_revoked": 1,
+    "at": "2026-06-11T10:02:13Z"
+  },
+  "audit": {
+    "tables_scanned": 9,
+    "rows_remaining": 0
+  },
+  "backup_window_days": 30
+}

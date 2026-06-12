@@ -1,0 +1,70 @@
+[
+  {
+    "id": "urn:brain:garagebrain:entity:2f5a9c1d-7e34-48b2-a6d0-913c4e8f7a02",
+    "type": "entity",
+    "subtype": "person",
+    "source": "garagebrain",
+    "external_ref": "customer/0871",
+    "owner": "mem-7f31",
+    "valid_time": "2021-09-01T00:00:00Z",
+    "system_time": "2026-06-11T09:10:00Z",
+    "visibility": "shared:household",
+    "sensitivity": "S1",
+    "attributes": {
+      "name": "Peter McCormack",
+      "summary": "Account holder since 2021.",
+      "email_normalised": "me@petermccormack.com"
+    }
+  },
+  {
+    "id": "urn:brain:garagebrain:entity:8d6f1c2e-4b0a-4f3e-9a51-2e7c0d9b1a44",
+    "type": "entity",
+    "subtype": "vehicle",
+    "source": "garagebrain",
+    "external_ref": "vehicle/2231",
+    "owner": "mem-7f31",
+    "valid_time": "2021-09-01T00:00:00Z",
+    "system_time": "2026-06-11T09:12:00Z",
+    "interval": { "start": "2021-09-01T00:00:00Z" },
+    "visibility": "shared:household",
+    "sensitivity": "S1",
+    "attributes": {
+      "name": "Land Rover Defender",
+      "summary": "Family car, reg LD70 XKP. MOT due 14 Mar 2027.",
+      "registration": "LD70 XKP",
+      "make": "Land Rover",
+      "mot_due": "2027-03-14"
+    }
+  },
+  {
+    "id": "urn:brain:garagebrain:activity:3a9e7f10-58c2-4d77-b6e4-91f0a2c83d05",
+    "type": "activity",
+    "subtype": "task",
+    "source": "garagebrain",
+    "external_ref": "vehicle/2231#mot_due",
+    "owner": "mem-7f31",
+    "subject": "urn:brain:garagebrain:entity:8d6f1c2e-4b0a-4f3e-9a51-2e7c0d9b1a44",
+    "valid_time": "2027-03-14T00:00:00Z",
+    "system_time": "2026-06-11T09:12:00Z",
+    "state": "open",
+    "visibility": "shared:household",
+    "sensitivity": "S1",
+    "provenance": ["urn:brain:garagebrain:entity:8d6f1c2e-4b0a-4f3e-9a51-2e7c0d9b1a44"],
+    "attributes": {
+      "title": "MOT due — Land Rover Defender",
+      "due_on": "2027-03-14"
+    }
+  },
+  {
+    "id": "urn:brain:garagebrain:edge:c41b8a6d-2e95-4f08-a3d7-60e9b5f12c88",
+    "type": "edge",
+    "subtype": "related_to",
+    "source": "garagebrain",
+    "subject": "urn:brain:garagebrain:activity:3a9e7f10-58c2-4d77-b6e4-91f0a2c83d05",
+    "object": "urn:brain:garagebrain:entity:8d6f1c2e-4b0a-4f3e-9a51-2e7c0d9b1a44",
+    "valid_time": "2026-06-11T09:12:00Z",
+    "system_time": "2026-06-11T09:12:00Z",
+    "visibility": "shared:household",
+    "sensitivity": "S1"
+  }
+]
