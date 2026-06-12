@@ -103,8 +103,8 @@ export function validGoalEntity(over: Partial<BrainRecord> = {}): BrainRecord {
 
 export function validGoalActivity(over: Partial<BrainRecord> = {}): BrainRecord {
   return {
-    id: urn('tpms', 'activity'),
-    type: 'activity', subtype: 'goal', source: 'tpms',
+    id: urn('examplefit', 'activity'),
+    type: 'activity', subtype: 'goal', source: 'examplefit',
     external_ref: 'goals/10k-2026', owner: 'mem-a',
     valid_time: '2026-06-01T00:00:00Z', system_time: '2026-06-01T08:00:00Z',
     interval: { start: '2026-06-01T00:00:00Z', end: '2026-09-30T23:59:59Z' },
