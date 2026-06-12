@@ -23,6 +23,8 @@ interface Grant {
 interface Token { hash: string; grant_id: string; expires_at: number; }
 
 const SENS_ORDER: Record<string, number> = { S0: 0, S1: 1, S2: 2, S3: 3 };
+// T-REF-02 (AC-09.2): deliberately break one wire law so the kit can be proven to catch it.
+const BREAK = process.env.BRAIN_BREAK ?? '';
 
 export interface ServerHandle { url: string; port: number; pipe: Pipe; identityFingerprint: string; close: () => Promise<void>; }
 
@@ -216,14 +218,17 @@ export async function startServer(opts: { port?: number } = {}): Promise<ServerH
     if (!grant || grant.revoked) return err(res, 401, 'grant_revoked', 'grant revoked');
 
     // JWS proof-of-possession (BP-03 §4.2): a stolen token without the grant-key JWS fails.
-    if (!jwsHeader) return err(res, 401, 'invalid_signature', 'missing proof-of-possession');
-    let claims;
-    try { claims = await verifyPoP(JSON.parse(jwsHeader), grant.granteePublicJwk); }
-    catch { return err(res, 401, 'invalid_signature', 'JWS verification failed'); }
-
-    // Body hash must match the signed claim (tamper detection precedes validation, BP-07 §3.2).
-    const bodyHash = 'sha256:' + sha256hex(jcs(envelope.body ?? {}));
-    if (claims.body_sha256 !== bodyHash) return err(res, 400, 'invalid_signature', 'body hash mismatch (tampered)');
+    // BREAK 'pop' (BP-03): skip proof-of-possession — a stolen/unsigned/tampered call gets in
+    // (T-HSK-03 / T-SEC-06 must catch this).
+    let claims: any = { body_sha256: '', issued_at: new Date().toISOString(), nonce: randomBytes(6).toString('hex') };
+    if (BREAK !== 'pop') {
+      if (!jwsHeader) return err(res, 401, 'invalid_signature', 'missing proof-of-possession');
+      try { claims = await verifyPoP(JSON.parse(jwsHeader), grant.granteePublicJwk); }
+      catch { return err(res, 401, 'invalid_signature', 'JWS verification failed'); }
+      // Body hash must match the signed claim (tamper detection precedes validation, BP-07 §3.2).
+      const bodyHash = 'sha256:' + sha256hex(jcs(envelope.body ?? {}));
+      if (claims.body_sha256 !== bodyHash) return err(res, 400, 'invalid_signature', 'body hash mismatch (tampered)');
+    }
 
     // Clock window ±5 min (BP-03 §4.2).
     const skew = Math.abs(Date.now() - Date.parse(claims.issued_at));
@@ -268,6 +273,8 @@ export async function startServer(opts: { port?: number } = {}): Promise<ServerH
     }
 
     if (method === 'action.execute') {
+      // BREAK 'gates' (BP-08): execute on a fresh connection without confirm (T-GAT-09 must catch).
+      if (BREAK === 'gates') return send(res, 200, { body: { state: 'executed', result: { ref: 'broken' } } });
       // Dark by default (BP-08 §2.1, T-GAT-09): until writes are deliberately enabled.
       if (grant.action_execute !== 'enabled') return send(res, 200, { body: { state: 'proposed', note: 'proposed, not executed' } });
       const action = envelope.body?.action;
@@ -301,13 +308,14 @@ export async function startServer(opts: { port?: number } = {}): Promise<ServerH
       const recs = (envelope.body?.records ?? []) as any[];
       const S2_FLOOR = new Set(['account', 'policy', 'transaction']); // starter S2 subtypes (BP-01 §9)
       for (const r of recs) {
-        // Loop guard (BP-04 §4): echo / hop rejection.
+        // Loop guard (BP-04 §4): echo / hop rejection. BREAK 'loopguard' lets echoes through.
         const chain = (r.origin_chain ?? []) as string[];
-        if (chain.includes('brain-reference') || r.source === 'brain-reference') return err(res, 409, 'echo_rejected', 'own id in chain or claimed as source');
-        if (chain.length > 3) return err(res, 409, 'hop_limit_exceeded', 'chain longer than 3 hops');
-        // S3 never travels (BP-07 §2.4, T-SEC-01). A reference pointer (S1, attributes.s3_pointer)
-        // is the only lawful sealed-data shape and passes (T-SEC-02).
-        if (r.sensitivity === 'S3') return err(res, 400, 'sensitivity_refused', 'S3 never syncs — pointer-only (BP-07 §2.4)');
+        if (BREAK !== 'loopguard') {
+          if (chain.includes('brain-reference') || r.source === 'brain-reference') return err(res, 409, 'echo_rejected', 'own id in chain or claimed as source');
+          if (chain.length > 3) return err(res, 409, 'hop_limit_exceeded', 'chain longer than 3 hops');
+        }
+        // S3 never travels (BP-07 §2.4, T-SEC-01). BREAK 's3' lets S3 onto the wire.
+        if (BREAK !== 's3' && r.sensitivity === 'S3') return err(res, 400, 'sensitivity_refused', 'S3 never syncs — pointer-only (BP-07 §2.4)');
         // No downgrade (BP-07 §2.2, T-SEC-05): a starter-S2 subtype stamped below S2 is a downgrade.
         if (S2_FLOOR.has(r.subtype) && (SENS_ORDER[r.sensitivity] ?? 0) < SENS_ORDER.S2)
           return err(res, 400, 'sensitivity_refused', `class-downgrade attempt on ${r.subtype} (BP-07 §2.2)`);

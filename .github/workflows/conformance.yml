@@ -1,0 +1,41 @@
+name: Class D conformance
+
+# The executable TCK in CI is the release gate (BP-09 §1, layer 2): green on every push.
+# The kit runs the full Class D suite against the reference pipe; the break-a-law harness proves
+# the kit can still catch a broken law (T-REF-02).
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  class-d:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install kit and reference dependencies
+        run: |
+          cd kit && npm ci || npm install
+          cd ../reference && npm ci || npm install
+
+      - name: Typecheck
+        run: |
+          cd kit && npx tsc -p tsconfig.json --noEmit
+          cd ../reference && npx tsc -p tsconfig.json
+
+      - name: Run the Class D suite against the reference (46/46)
+        run: bash run-conformance.sh --out kit/results.json
+
+      - name: Prove the kit catches a broken law (T-REF-02)
+        run: cd reference && bash break-a-law.sh
+
+      - name: Upload conformance results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tck-results
+          path: kit/results.json

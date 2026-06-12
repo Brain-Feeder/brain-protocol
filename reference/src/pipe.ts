@@ -4,7 +4,7 @@
 // `SET LOCAL ROLE brain_app` so row-level security bites against a non-owner — exactly what a
 // member or peer hits. Deliberately small (BUILD-BRIEF §4): readable in an afternoon.
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, rmSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { createHash, randomBytes } from 'node:crypto';
@@ -21,6 +21,10 @@ export type Who = { id: string; role: 'adult' | 'child' } | 'anon';
 
 const DATED_REQUIREMENT = /(_due|_expiry|_renewal|_review)$|^mot_due$/;
 const TABLES = ['entity', 'activity', 'edge', 'action', 'derived_memory'] as const;
+
+// T-REF-02 (AC-09.2): BRAIN_BREAK deliberately breaks one law so the kit can be proven to catch
+// it. A reference that cannot be made to fail is one whose tests prove nothing. Never set in prod.
+const BREAK = process.env.BRAIN_BREAK ?? '';
 
 function memberId(who: Who): string {
   return who === 'anon' ? '' : who.id;
@@ -65,6 +69,7 @@ export class Pipe {
     if (!this.started) return;
     try { await this.c.end(); } catch { /* */ }
     try { await this.pg.stop(); } catch { /* */ }
+    try { rmSync(this.dataDir, { recursive: true, force: true }); } catch { /* */ }
     this.started = false;
   }
 
@@ -100,7 +105,8 @@ export class Pipe {
     const rejected: { index: number; id?: string; reasons: string[] }[] = [];
     for (let i = 0; i < records.length; i++) {
       const rec = structuredClone(records[i]);
-      const reasons = validateRecord(rec);
+      // BREAK 'envelope' (BP-01): skip boundary validation — invalid envelopes leak in (T-ENV-01).
+      const reasons = BREAK === 'envelope' ? [] : validateRecord(rec);
       if (reasons.length) { this.counters.rejected_malformed++; rejected.push({ index: i, id: rec.id as string, reasons }); continue; }
       // Unknown scope fails closed → private (BP-01 §8, CD-6).
       const vis = rec.visibility as string;
@@ -229,7 +235,9 @@ export class Pipe {
     const m = memberId(who);
     await this.c.query('begin');
     try {
-      await this.c.query('set local role brain_app');
+      // BREAK 'rls' (BP-02): read as the superuser, bypassing row-level security — the visibility
+      // law no longer binds and a non-owner sees everything (T-DAT-01 must catch this).
+      if (BREAK !== 'rls') await this.c.query('set local role brain_app');
       await this.c.query("select set_config('app.member', $1, true)", [m]);
       const docs: Record_[] = [];
       for (const t of TABLES) {
