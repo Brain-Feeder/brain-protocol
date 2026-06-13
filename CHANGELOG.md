@@ -5,6 +5,15 @@ MINOR (forward-compatible), breaking = MAJOR, errata = PATCH.
 
 ## Unreleased
 
+- **CI fix (2026-06-13): `run-conformance.sh` now resolves a relative `--out` against the repo root.**
+  The CI step invokes `bash run-conformance.sh --out kit/results.json`, but the script `cd`s into
+  `kit/` before running the suite, so the relative path became `kit/kit/results.json` and the run died
+  with `ENOENT` while *writing results* - immediately after passing 46/46. Net effect: CI had been red
+  on every run since #1, even though the conformance suite itself passed 46/46 every time (visible in
+  each run log). Local runs used an absolute `--out` and never hit it. No test, spec, or kit semantics
+  changed; this only fixes where results are written. The renamed-reference and break-a-law CI steps
+  run downstream of this and had therefore never executed in CI before; they do now.
+
 - **Suite 2.0.3 (PATCH, 2026-06-13) — reference read-source-scoping.** The reference now serves only
   its OWN-source rows through a read grant (`calendar.read`/`records.read`/`records.export`): records
   synced in from another system under a connection are never read back through that connection's read

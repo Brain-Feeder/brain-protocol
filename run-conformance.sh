@@ -11,6 +11,10 @@ ROOT="$(cd "$(dirname "$0")" && pwd)"
 PORT="${PORT:-8080}"
 OUT="${1:-$ROOT/kit/results.json}"
 [ "${1:-}" = "--out" ] && OUT="${2:-$ROOT/kit/results.json}"
+# Resolve a relative --out against the repo root (the invocation dir), because the suite runs after
+# `cd "$ROOT/kit"`. CI passes `--out kit/results.json`; without this it became kit/kit/results.json
+# and the run died with ENOENT on writing results AFTER passing 46/46 (CI red since run #1).
+case "$OUT" in /*) ;; *) OUT="$ROOT/$OUT" ;; esac
 
 echo "→ installing dependencies"
 ( cd "$ROOT/kit" && npm install --silent )
