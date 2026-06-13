@@ -13,8 +13,12 @@ MINOR (forward-compatible), breaking = MAJOR, errata = PATCH.
   connected - break servers now boot with `BRAIN_CONFORMANCE_SEED=0` (bounds rows are only for
   T-DAT-07) and the wait is 40s; (2) "caught" was decided by scraping stdout, which a crashed or
   colourised run reads as a false "stayed green" - it is now decided by the broken test's recorded
-  status in `results.json` (caught iff `status == 'fail'`). Verified locally: adapter breaks 2/2, and
-  the first wire break that CI had marked missed now caught.
+  status in `results.json` (caught iff `status == 'fail'`). A third cause surfaced in CI after those:
+  break-a-law shared port 8090 with the renamed-reference CI step, which can leave an orphaned `node`
+  server there (run-conformance.sh kills the `npx` wrapper, not its child), so every wire break talked
+  to a stale, unbroken server and reported `status=pass`. Fixed: break-a-law now uses a unique
+  incrementing port per wire break (base 8190, off 8090) and kills the whole process group via
+  `setsid` so nothing orphans. Verified locally end-to-end: 7/7 (adapter 2 + wire 5).
 
 - **CI fix (2026-06-13): `run-conformance.sh` now resolves a relative `--out` against the repo root.**
   The CI step invokes `bash run-conformance.sh --out kit/results.json`, but the script `cd`s into

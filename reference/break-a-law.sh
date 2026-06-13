@@ -9,7 +9,10 @@
 set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
 KIT="$HERE/../kit"
-PORT=8090
+# Base port 8190 (NOT 8090): the renamed-reference CI step runs run-conformance.sh on 8090 and can
+# leave an orphaned node server there (it kills the npx wrapper, not the child). Each wire break also
+# gets its OWN incrementing port + a process-group kill, so no break ever talks to a stale server.
+PORT=8190
 PASS=0; FAIL=0
 MODE="${1:-all}"
 
@@ -25,11 +28,13 @@ check_red() { # $1 label, $2 expected-failing test id, $3 'adapter'|'wire', $4 b
   if [ "$kind" = adapter ]; then
     ( cd "$KIT" && BRAIN_BREAK="$brk" npx tsx src/cli.ts run --class D --adapter ../reference/adapter.ts --only "$tid" --out "$res" >/dev/null 2>&1 )
   else
-    BRAIN_BREAK="$brk" BRAIN_CONFORMANCE_SEED=0 npx tsx "$HERE/serve.ts" $PORT > /tmp/break-srv.log 2>&1 &
+    PORT=$((PORT + 1))  # a fresh port per wire break — never reuse, never collide with a ghost
+    local log="/tmp/break-srv-$tid.log"
+    setsid env BRAIN_BREAK="$brk" BRAIN_CONFORMANCE_SEED=0 npx tsx "$HERE/serve.ts" $PORT > "$log" 2>&1 &
     local SRV=$!
-    for i in $(seq 1 40); do grep -q "listening on http" /tmp/break-srv.log && break; sleep 1; done
+    for i in $(seq 1 40); do grep -q "listening on http" "$log" && break; sleep 1; done
     ( cd "$KIT" && npx tsx src/cli.ts run --class D --target "http://localhost:$PORT" --only "$tid" --out "$res" >/dev/null 2>&1 )
-    kill $SRV 2>/dev/null; wait $SRV 2>/dev/null
+    kill -- -"$SRV" 2>/dev/null; wait "$SRV" 2>/dev/null  # kill the whole process group (npx+tsx+node), no orphan
   fi
   [ -f "$res" ] && status=$(node -e "const r=require('$res');const t=(r.tests||[]).find(x=>x.id==='$tid');console.log(t?t.status:'(test absent)')" 2>/dev/null)
   if [ "$status" = "fail" ]; then
