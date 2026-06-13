@@ -1,0 +1,17 @@
+{
+  "system_id": "tpms",
+  "card_url": "https://brain.petermccormack.com/.well-known/brain-protocol/card.json",
+  "card_key_fingerprint": "ed25519:137a8f26b1072aa304a921cf0b6c12e7",
+  "class": "D",
+  "suite_version": "2.0.3",
+  "certification": { "tier": "self", "issued": "2026-06-13" },
+  "tck": {
+    "version": "2.0.3",
+    "kit_commit": "a5efcb0",
+    "result": "46/46 pass",
+    "passed_at": "2026-06-13",
+    "results_url": "https://brain.petermccormack.com/conformance/2.0.3.json"
+  },
+  "status": "active",
+  "revocation": null
+}
