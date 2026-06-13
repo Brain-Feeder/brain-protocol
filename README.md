@@ -1,5 +1,7 @@
 # Brain Protocol
 
+[![Class D conformance](https://github.com/Brain-Feeder/brain-protocol/actions/workflows/conformance.yml/badge.svg?branch=main)](https://github.com/Brain-Feeder/brain-protocol/actions/workflows/conformance.yml)
+
 **A common language — and a set of safety laws — so independent systems and AI
 agents can share a human's life data with consent, confirmation, and the right
 to be forgotten.**
