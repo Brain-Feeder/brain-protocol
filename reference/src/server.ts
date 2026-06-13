@@ -8,7 +8,7 @@
 // make (T-SEC-11 captures the network and proves no phone-home).
 
 import { createServer, type Server, type IncomingMessage, type ServerResponse } from 'node:http';
-import { createHash, randomBytes } from 'node:crypto';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { isIP } from 'node:net';
 import { lookup } from 'node:dns/promises';
 import { Pipe } from './pipe.js';
@@ -307,6 +307,17 @@ export async function startServer(opts: { port?: number } = {}): Promise<ServerH
       return send(res, 200, { body: { checksum: await pipe.snapshotChecksum() } });
     }
 
+    // records.ingest/resync are the sync direction — a peer pushing its OWN records under its
+    // connection — and require a sync-mode grant cell; a read grant can never write (BP-04 §5.1).
+    // 2.0.2: the prior reference accepted ingest on a read grant. That looseness is exactly what let
+    // the old T-DAT-07 seed over the wire and "pass"; a correctly-hardened provider (TPMS) refuses it.
+    // BREAK 'ingestauth' re-loosens this (accepts ingest on a read grant) so T-COM-06 proves the kit
+    // catches the regression (T-REF-02). Never set in production.
+    if (BREAK !== 'ingestauth' && (method === 'records.ingest' || method === 'records.resync')) {
+      const syncCell = grant.matrix.find((c) => c.capability.split('.')[0] === 'records' && (c.mode === 'sync' || c.mode === 'write'));
+      if (!syncCell) return err(res, 403, 'cell_denied', 'records.ingest/resync requires a sync-mode grant cell — a read grant can never write (BP-04 §5.1)');
+    }
+
     if (method === 'records.resync') {
       // Staged atomic resync (BP-04 §3.3.3, T-COM-01): a resync killed before the swap leaves
       // prior state byte-intact; the read model never blanks.
@@ -337,6 +348,21 @@ export async function startServer(opts: { port?: number } = {}): Promise<ServerH
     }
 
     return err(res, 400, 'protocol_error', `unknown method ${method}`);
+  }
+
+  // Conformance precondition (BP-02 §6 / AC-02.5, T-DAT-07): a served read-bounds law can only be
+  // OBSERVED if the provider already holds more than the batch cap of its own rows under a read
+  // lens — a peer with a read grant can never create that state (BP-04 §5.1). So the reference
+  // stands up > cap first-party rows under mem-a at start-up. Set BRAIN_CONFORMANCE_SEED=0 to skip.
+  if (process.env.BRAIN_CONFORMANCE_SEED !== '0') {
+    const now = new Date().toISOString();
+    const bulk = Array.from({ length: 520 }, (_, i) => ({
+      id: `urn:brain:${SYSTEM_ID}:entity:${randomUUID()}`,
+      type: 'entity', subtype: 'person', source: SYSTEM_ID, external_ref: `bounds/${i}`,
+      owner: 'mem-a', visibility: 'shared:household', sensitivity: 'S0',
+      valid_time: now, system_time: now, attributes: { name: `Bounds row ${i}` },
+    }));
+    await pipe.seed({ id: 'mem-a', role: 'adult' }, bulk as unknown as Parameters<typeof pipe.seed>[1], 'conformance-bounds');
   }
 
   await new Promise<void>((resolve) => server.listen(port, resolve));

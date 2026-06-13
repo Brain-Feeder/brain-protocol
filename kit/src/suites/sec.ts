@@ -12,7 +12,7 @@ function wire(ctx: TestContext): WireClient {
 }
 
 const READ_CELL = { capability: 'calendar.read', direction: 'offer', mode: 'read', sensitivity_ceiling: 'S2' };
-const INGEST_CELL = { capability: 'records', direction: 'offer', mode: 'read', sensitivity_ceiling: 'S2' };
+const INGEST_CELL = { capability: 'records', direction: 'offer', mode: 'sync', sensitivity_ceiling: 'S2' };
 
 // T-SEC-01 — S3 never on the wire.
 defineTest({

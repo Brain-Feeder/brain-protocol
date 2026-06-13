@@ -25,7 +25,11 @@ import './suites/ref.js';
 
 // 2.0.1 (PATCH, BP-09 §5.2): the kit learns the target's system id from its verified card
 // instead of assuming it — a coupling removed, no test semantics changed.
-const SUITE_VERSION = '2.0.1';
+// 2.0.2 (PATCH, BP-09 §5.2): T-DAT-07 reads the served bounds envelope against provider-stood-up
+// rows instead of seeding by wire ingest (which only passed against a reference accepting
+// unauthenticated ingest); the reference now requires a sync-mode grant for ingest/resync. The
+// read-bounds LAW is unchanged — only how the kit exercises it. Surfaced by the TPMS integration.
+const SUITE_VERSION = '2.0.2';
 
 interface Args {
   cmd: string;
@@ -95,17 +99,22 @@ async function main(): Promise<void> {
   // an explicit --system-id, else the id from the target's verified agent card (BP-03 §2.3).
   // (TPMS friction log, 2026-06-12: a system honestly named anything must still certify.)
   let targetSystemId: string | null = args.systemId;
-  if (!targetSystemId && args.target) {
+  let targetCap: number | null = null;
+  if (args.target) {
     const card = await new WireClient(args.target).fetchAndVerifyCard();
-    if (card.ok && card.body?.system_id) targetSystemId = card.body.system_id as string;
-    else console.error(C.yellow(`  warning: could not learn the target's system id from its card (${card.reason ?? 'no system_id'}); pass --system-id`));
+    if (card.ok && card.body) {
+      if (!targetSystemId && card.body.system_id) targetSystemId = card.body.system_id as string;
+      if (typeof card.body?.limits?.max_batch_records === 'number') targetCap = card.body.limits.max_batch_records as number;
+    } else if (!targetSystemId) {
+      console.error(C.yellow(`  warning: could not learn the target's system id from its card (${card.reason ?? 'no system_id'}); pass --system-id`));
+    }
   }
 
   console.log(C.bold(`\nBrain Protocol TCK ${SUITE_VERSION} — Class ${args.cls}`));
   console.log(C.dim(`target: ${args.target ?? '(none)'}  system-id: ${targetSystemId ?? '(none)'}  adapter: ${args.adapter ?? '(none)'}  ${args.only.length ? 'only: ' + args.only.join(',') : ''}\n`));
 
   const opts: RunOptions = {
-    cls: args.cls, adapter, peer, target: args.target, targetSystemId, strict: args.strict, only: args.only,
+    cls: args.cls, adapter, peer, target: args.target, targetSystemId, targetCap, strict: args.strict, only: args.only,
     onResult: (r) => {
       const line = `  ${badge(r.status)}  ${r.id.padEnd(9)} ${r.name}`;
       console.log(line);

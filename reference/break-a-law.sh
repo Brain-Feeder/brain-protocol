@@ -41,6 +41,7 @@ fi
 if [ "$MODE" = all ] || [ "$MODE" = wire ]; then
   check_red "BP-03 proof-of-possession"  T-SEC-06 wire pop
   check_red "BP-04 loop guard"           T-COM-02 wire loopguard
+  check_red "BP-04 ingest needs sync grant" T-COM-06 wire ingestauth
   check_red "BP-07 S3 wall"              T-SEC-01 wire s3
   check_red "BP-08 human gate"           T-GAT-09 wire gates
 fi

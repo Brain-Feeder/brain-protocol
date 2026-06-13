@@ -180,26 +180,29 @@ defineTest({
   },
 });
 
-// T-DAT-07 — bounds hold (AC-02.5). Served-endpoint behaviour, over the wire.
+// T-DAT-07 — bounds hold (AC-02.5). Served-endpoint behaviour, over the wire. The kit does NOT
+// seed: a read grant can never write (BP-04 §5.1), and a served read returns the provider's OWN
+// rows, so no peer-side ingest can manufacture the over-cap state. The provider stands up more
+// than the batch cap of its own rows under the read lens as a certification precondition (see
+// ADAPTER.md); the kit only reads and proves the served page is bounded.
+// 2.0.2: the prior fixture seeded 600 rows via wire records.ingest and only "passed" against a
+// reference that accepted unauthenticated ingest. A correctly-hardened provider (write-gated
+// ingest, own-source reads, a batch DoS guard) refused it — TPMS friction log, 2026-06-13.
 defineTest({
   id: 'T-DAT-07', suite: 'DAT', cls: 'D', needs: 'wire',
   name: 'bounds hold', clause: 'BP-02 §6 / AC-02.5',
   async run(ctx) {
     const w = new WireClient(ctx.target!); resetUuids();
-    await w.handshake({ matrix: [
-      { capability: 'records', direction: 'offer', mode: 'read', sensitivity_ceiling: 'S1' },
-      { capability: 'calendar', direction: 'offer', mode: 'read', sensitivity_ceiling: 'S1' },
-    ] });
-    // Seed 600 rows owned by the member lens, then request a page over the 500 cap.
-    const batch: BrainRecord[] = [];
-    for (let i = 0; i < 600; i++) batch.push(validPerson({ id: randUrn('garagebrain', 'entity'), external_ref: `bulk/${i}`, owner: 'mem-a' }));
-    const ing = await w.call('records.ingest', { records: batch });
-    ctx.note('bulk ingest', { status: ing.status, accepted: ing.body?.body?.accepted });
-    const page = await w.call('calendar.read', { limit: 1000 });
-    ctx.note('over-cap page', { count: page.body?.body?.records?.length, truncated: page.body?.body?.truncated, cursor: page.body?.body?.cursor });
-    ctx.check(page.body?.body?.records?.length <= 500, 'BP-02 §6', 'an over-cap response must be truncated at the batch cap');
-    ctx.check(page.body?.body?.truncated === true && !!page.body?.body?.cursor, 'BP-02 §6',
-      'an over-cap response must be flagged truncated and carry a cursor — never silently dropped');
+    await w.handshake({ matrix: [{ capability: 'calendar', direction: 'offer', mode: 'read', sensitivity_ceiling: 'S1' }] });
+    const CAP = ctx.targetCap ?? 500; // the provider's advertised page cap, read from its card (BP-02 §6 default)
+    const page = await w.call('calendar.read', { limit: CAP * 8 });
+    const recs = page.body?.body?.records ?? [];
+    const truncated = page.body?.body?.truncated;
+    const cursor = page.body?.body?.cursor;
+    ctx.note('served page', { cap: CAP, count: recs.length, truncated, cursor, complete: page.body?.body?.complete });
+    ctx.check(recs.length <= CAP, 'BP-02 §6', `a served page must never exceed the batch cap (${CAP}); got ${recs.length}`);
+    ctx.check(truncated === true && !!cursor, 'BP-02 §6',
+      'with more than a page standing under the lens, an over-cap response must be flagged truncated and carry a cursor — never silently dropped');
   },
 });
 

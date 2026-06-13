@@ -26,6 +26,26 @@ export, mint a secret, attempt a journal write, disconnect, back up, restore —
 composes them into the tests. If the adapter contained test logic, the kit would be testing the
 adapter, not the system. Keep yours boring.
 
+## Two certification preconditions (suite 2.0.2)
+
+These exist because a conformance test must observe the *system's own* behaviour, never the kit's.
+
+1. **Stand up more than the batch cap of rows for the bounds test.** T-DAT-07 (BP-02 §6, served
+   read-bounds) no longer seeds its own data — a read grant can never write (BP-04 §5.1), and a
+   served read returns *your* rows, so no peer-side ingest can create the over-cap condition. Before
+   certifying, your system must hold **more than `limits.max_batch_records` rows under the read lens
+   the kit will query** (the reference stands up 520 under `mem-a` at start-up). If your live data
+   doesn't naturally exceed the cap, expose a small documented conformance seed seam — not a real
+   write path. The kit then reads and proves the served page is bounded (`records ≤ cap`, and
+   `truncated` + a `cursor` when more rows exist).
+
+2. **Your `--target` and adapter must delegate to your real validator.** T-COM-07 and T-ENV-01 assert
+   that malformed input is rejected. If a harness-side canonical screen does the rejecting instead of
+   your live wire (`validateInbound`) or store boundary, the test passes for the wrong reason — the
+   same failure shape as the old T-DAT-07. Wire the `--target` to your real endpoint and make the
+   adapter's `seedAs` delegate to the validator your product actually runs, so the rejection the kit
+   sees is the one a real peer would hit.
+
 ## Module shape
 
 The `--adapter` file MUST `export default` a factory returning an `Adapter` (sync or async):

@@ -5,6 +5,30 @@ MINOR (forward-compatible), breaking = MAJOR, errata = PATCH.
 
 ## Unreleased
 
+- **Suite 2.0.2 (PATCH, 2026-06-13).** Two kit-fidelity fixes surfaced by the first partner
+  integration (TPMS), both the same shape — a test reaching its verdict for a reason other than the
+  system's own behaviour. The read-bounds law (BP-02 §6) is unchanged; only how the kit exercises it
+  changes, so this is a PATCH (BP-09 §5.2). (1) **T-DAT-07 no longer seeds by wire ingest.** The old
+  fixture pushed 600 rows over `records.ingest` while holding only a read grant, then read them back —
+  which only "passed" against a reference that accepted unauthenticated ingest. A correctly-hardened
+  provider (write-gated ingest, own-source reads, a per-batch DoS guard) refuses that path, so the
+  assertion was never reached — and an unreached assertion is not a pass. A served read-bounds law
+  cannot be black-box seeded by a read-only peer at all (a read grant can never write, BP-04 §5.1;
+  served reads return the provider's own rows). The kit now reads with an explicit `limit` and asserts
+  the served bounds envelope (`records ≤ cap`, `truncated` + `cursor` when more rows stand under the
+  lens, `complete`/null when not) against rows the provider stands up as a certification precondition
+  (see `kit/ADAPTER.md`). (2) **The reference is tightened:** `records.ingest`/`records.resync` now
+  require a sync-mode grant cell — a read grant can never write — removing the looseness that masked
+  the above; the COM/SEC seeding tests now hold a sync cell. (3) **Fidelity note (T-COM-07/T-ENV-01):**
+  the kit must observe the system's own wire/boundary rejection, never a harness-side canonical
+  pre-screen; documented in `kit/ADAPTER.md`. Full Class D still passes 46/46 from a clean clone, with
+  T-DAT-07 now observing real truncation (500-row page, `truncated:true`, cursor) rather than passing
+  on a looseness. Two lock-ins so neither fix can silently regress: T-COM-06 now also asserts that
+  `records.ingest` under a read-only grant is refused, with a `BREAK 'ingestauth'` branch proving the
+  kit catches a re-loosening (T-REF-02); and the bounds cap is read from the provider's advertised
+  `limits.max_batch_records` on its verified card (threaded through the harness as `targetCap`) rather
+  than a hardcoded constant, so a provider with a different cap is tested against its own.
+
 - **Conformance registry v0 (BP-09 §4, 2026-06-12).** `registry/` — a signed, append-only,
   publicly-readable record of conformance attestations, hosted from this repository, with no
   telemetry (CD-3). Closes the gap a partner integration surfaced: a published `results.json` is

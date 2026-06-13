@@ -11,7 +11,10 @@ function wire(ctx: TestContext): WireClient {
   if (!ctx.target) ctx.skip('COM needs --target (the wire surface)');
   return new WireClient(ctx.target);
 }
-const CELL = { capability: 'records', direction: 'offer', mode: 'read', sensitivity_ceiling: 'S1' };
+// Ingest is the sync direction — pushing our own records under our connection — so the seeding
+// cell is mode 'sync' (2.0.2): a read grant can never write (BP-04 §5.1). Foreign writes
+// (upsert/write/tombstone) stay denied regardless of grant.
+const CELL = { capability: 'records', direction: 'offer', mode: 'sync', sensitivity_ceiling: 'S1' };
 
 // T-COM-01 — staged-resync crash test (AC-04.1).
 defineTest({
@@ -20,7 +23,7 @@ defineTest({
   async run(ctx) {
     const w = wire(ctx); resetUuids();
     await w.handshake({ matrix: [
-      { capability: 'records', direction: 'offer', mode: 'read', sensitivity_ceiling: 'S1' },
+      { capability: 'records', direction: 'offer', mode: 'sync', sensitivity_ceiling: 'S1' },
       { capability: 'state', direction: 'offer', mode: 'read', sensitivity_ceiling: 'S1' },
     ] });
     // Seed a known-good committed state.
@@ -90,6 +93,14 @@ defineTest({
     ctx.note('foreign write attempts', { upsert: upsert.body?.error?.code, write: write.body?.error?.code, tombstone: tombstone.body?.error?.code });
     ctx.check([upsert, write, tombstone].every((r) => r.body?.error?.code === 'cell_denied'), 'BP-04 §5.1',
       'every cross-system mutation other than a proposed Action must be refused — propose is the only write');
+    // A read grant can never write: records.ingest under a read-only grant must be refused (BP-04 §5.1).
+    // Pins the 2.0.2 reference tightening so the unauthenticated-ingest looseness cannot silently return.
+    const ro = wire(ctx);
+    await ro.handshake({ matrix: [{ capability: 'records', direction: 'offer', mode: 'read', sensitivity_ceiling: 'S1' }] });
+    const roIngest = await ro.call('records.ingest', { records: [] });
+    ctx.note('read-only ingest', roIngest.body?.error?.code ?? roIngest.body);
+    ctx.check(roIngest.body?.error?.code === 'cell_denied', 'BP-04 §5.1',
+      'records.ingest under a read-only grant must be refused — a read grant can never write');
   },
 });
 
