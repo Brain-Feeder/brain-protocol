@@ -38,6 +38,10 @@ jobs:
       - name: Prove the kit catches a broken law (T-REF-02)
         run: cd reference && bash break-a-law.sh
 
+      - name: Verify the connect handshake (BP-03 §6.4, AC-03.6)
+        # Both sides of the consumer-initiated handshake in-process: happy path + the refusals.
+        run: cd kit && node connect-handshake-check.mjs
+
       - name: Verify the conformance registry (BP-09 §4 — chain, signatures, schema)
         run: |
           cd registry && (npm ci || npm install)
