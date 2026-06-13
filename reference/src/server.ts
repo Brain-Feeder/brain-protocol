@@ -274,7 +274,13 @@ export async function startServer(opts: { port?: number } = {}): Promise<ServerH
       const readable = grant.matrix.find((c) => c.mode === 'read');
       if (!readable) return err(res, 403, 'cell_denied', 'no read cell in grant');
       // Serve under the member lens + ceiling, with bounds (truncate + cursor).
-      const all = await pipe.query({ id: grant.member_lens, role: 'adult' }, { owner: grant.member_lens });
+      // 2.0.3 read-source-scoping: a served read returns only the provider's OWN-source rows. Records
+      // synced in from another system under this connection are never served back through a read grant
+      // — a peer can never read back, via a read, data that was pushed in from elsewhere. BREAK
+      // 'sourcescope' disables this so the property can be probed/regressed. (Provider-choice hardening,
+      // not a mandatory Class D law; matches TPMS scoping calendar.read to its own source.)
+      const owned = await pipe.query({ id: grant.member_lens, role: 'adult' }, { owner: grant.member_lens });
+      const all = BREAK === 'sourcescope' ? owned : owned.filter((r) => (r as Record<string, unknown>).source === SYSTEM_ID);
       const cap500 = 500;
       const reqLimit = envelope.body?.limit ?? cap500;
       const limit = Math.min(reqLimit, cap500);

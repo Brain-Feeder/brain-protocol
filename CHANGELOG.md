@@ -5,6 +5,17 @@ MINOR (forward-compatible), breaking = MAJOR, errata = PATCH.
 
 ## Unreleased
 
+- **Suite 2.0.3 (PATCH, 2026-06-13) — reference read-source-scoping.** The reference now serves only
+  its OWN-source rows through a read grant (`calendar.read`/`records.read`/`records.export`): records
+  synced in from another system under a connection are never read back through that connection's read
+  grant. This closes the last item deferred from 2.0.2 and models the privacy-preserving choice a
+  hardened provider makes (TPMS scopes `calendar.read` to its own source). It is a reference-exemplar
+  hardening and a **provider choice**, not a new mandatory Class D law — making own-source scoping a
+  universal requirement would be a spec expansion (MINOR) for the council, since some hubs legitimately
+  serve multi-source reads. No test semantics changed; Class D still passes 46/46 (the bounds pre-seed
+  is own-source, so T-DAT-07 is unaffected). A `BREAK 'sourcescope'` toggle disables the filter so the
+  property can be probed and regressed.
+
 - **Suite 2.0.2 (PATCH, 2026-06-13).** Two kit-fidelity fixes surfaced by the first partner
   integration (TPMS), both the same shape — a test reaching its verdict for a reason other than the
   system's own behaviour. The read-bounds law (BP-02 §6) is unchanged; only how the kit exercises it

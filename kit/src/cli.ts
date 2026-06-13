@@ -29,7 +29,10 @@ import './suites/ref.js';
 // rows instead of seeding by wire ingest (which only passed against a reference accepting
 // unauthenticated ingest); the reference now requires a sync-mode grant for ingest/resync. The
 // read-bounds LAW is unchanged — only how the kit exercises it. Surfaced by the TPMS integration.
-const SUITE_VERSION = '2.0.2';
+// 2.0.3 (PATCH, BP-09 §5.2): reference-exemplar hardening only — served reads are scoped to the
+// provider's own source (a peer can't read back synced-in foreign rows). No test semantics changed;
+// source-scoping stays a provider choice, not a mandatory Class D law.
+const SUITE_VERSION = '2.0.3';
 
 interface Args {
   cmd: string;
