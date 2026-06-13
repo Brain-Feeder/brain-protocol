@@ -13,23 +13,29 @@ PORT=8090
 PASS=0; FAIL=0
 MODE="${1:-all}"
 
-# expect_caught <label> <break-test-id> ; runs with BRAIN_BREAK already exported / server already up
+# "Caught" is decided by the test's RECORDED status in results.json (status == 'fail'), never by
+# scraping stdout — stdout scraping is fragile (ANSI colour, a crashed run, a skipped test all read
+# as "stayed green"). Break servers boot with BRAIN_CONFORMANCE_SEED=0: the bounds rows are only for
+# T-DAT-07 and seeding them before the server listens slows boot past the wait window (this is what
+# made the wire breaks spuriously "miss" once the 2.0.2 seed was added).
 check_red() { # $1 label, $2 expected-failing test id, $3 'adapter'|'wire', $4 break name
   local label="$1" tid="$2" kind="$3" brk="$4"
-  local out rc
+  local res="/tmp/break-$tid.json" status="(no result file — run did not complete)"
+  rm -f "$res"
   if [ "$kind" = adapter ]; then
-    out=$(cd "$KIT" && BRAIN_BREAK="$brk" npx tsx src/cli.ts run --class D --adapter ../reference/adapter.ts --only "$tid" 2>/dev/null)
+    ( cd "$KIT" && BRAIN_BREAK="$brk" npx tsx src/cli.ts run --class D --adapter ../reference/adapter.ts --only "$tid" --out "$res" >/dev/null 2>&1 )
   else
-    BRAIN_BREAK="$brk" npx tsx "$HERE/serve.ts" $PORT > /tmp/break-srv.log 2>&1 &
+    BRAIN_BREAK="$brk" BRAIN_CONFORMANCE_SEED=0 npx tsx "$HERE/serve.ts" $PORT > /tmp/break-srv.log 2>&1 &
     local SRV=$!
-    for i in $(seq 1 20); do grep -q "listening on http" /tmp/break-srv.log && break; sleep 1; done
-    out=$(cd "$KIT" && npx tsx src/cli.ts run --class D --target http://localhost:$PORT --only "$tid" 2>/dev/null)
+    for i in $(seq 1 40); do grep -q "listening on http" /tmp/break-srv.log && break; sleep 1; done
+    ( cd "$KIT" && npx tsx src/cli.ts run --class D --target "http://localhost:$PORT" --only "$tid" --out "$res" >/dev/null 2>&1 )
     kill $SRV 2>/dev/null; wait $SRV 2>/dev/null
   fi
-  if echo "$out" | grep -q "verdict: .*FAIL\|FAIL  $tid"; then
+  [ -f "$res" ] && status=$(node -e "const r=require('$res');const t=(r.tests||[]).find(x=>x.id==='$tid');console.log(t?t.status:'(test absent)')" 2>/dev/null)
+  if [ "$status" = "fail" ]; then
     echo "  ✓ $label — broke the law, kit caught it ($tid went red)"; PASS=$((PASS+1))
   else
-    echo "  ✗ $label — BROKE THE LAW BUT KIT STAYED GREEN ($tid) — the kit is broken"; FAIL=$((FAIL+1))
+    echo "  ✗ $label — BROKE THE LAW BUT KIT STAYED GREEN ($tid status=$status) — the kit is broken"; FAIL=$((FAIL+1))
   fi
 }
 

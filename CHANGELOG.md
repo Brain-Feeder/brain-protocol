@@ -5,6 +5,17 @@ MINOR (forward-compatible), breaking = MAJOR, errata = PATCH.
 
 ## Unreleased
 
+- **CI fix #2 (2026-06-13): break-a-law harness hardened.** Once the results-path fix let CI reach
+  the break-a-law step for the first time, it reported 6 of 7 breaks "uncaught" - a harness artefact,
+  not a conformance gap (each break fails correctly when run directly; the suite itself is green).
+  Two causes, both fixed: (1) the 2.0.2 bounds seed (520 rows seeded before the server listens) pushed
+  the reference's boot past the harness's 20s wait, so wire-break servers were not ready when the kit
+  connected - break servers now boot with `BRAIN_CONFORMANCE_SEED=0` (bounds rows are only for
+  T-DAT-07) and the wait is 40s; (2) "caught" was decided by scraping stdout, which a crashed or
+  colourised run reads as a false "stayed green" - it is now decided by the broken test's recorded
+  status in `results.json` (caught iff `status == 'fail'`). Verified locally: adapter breaks 2/2, and
+  the first wire break that CI had marked missed now caught.
+
 - **CI fix (2026-06-13): `run-conformance.sh` now resolves a relative `--out` against the repo root.**
   The CI step invokes `bash run-conformance.sh --out kit/results.json`, but the script `cd`s into
   `kit/` before running the suite, so the relative path became `kit/kit/results.json` and the run died
