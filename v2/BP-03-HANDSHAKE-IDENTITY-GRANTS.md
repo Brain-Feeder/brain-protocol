@@ -305,6 +305,53 @@ S2 cells require, in addition to §6.1:
 - A grant document naming a child lens is invalid; a receiver MUST refuse it and log the attempt.
 - Inbound proposed Actions concerning a child always gate to a guardian (CD-7, BP-08).
 
+### 6.4 Connect handshake — consumer-initiated establishment (the wire bootstrap)
+
+§6.1–6.3 fix *who consents to what*; this section fixes *the on-the-wire exchange* by which a
+consumer asks to connect and a grantor issues the grant. Without it, every connection is an
+out-of-band exchange of signed documents. The handshake changes no law: writes stay propose-only,
+secrets stay vaulted, grants stay dual-signed and default-deny, and S2 still requires §6.2.
+
+**Roles.** The **consumer** wants to read or propose; the **grantor** owns the capability and issues
+the grant. The grantor always consents — asking is not granting. Both sides MUST hold a long-lived
+identity key (§4) and SHOULD publish a card (§2); on first contact the grantor MUST pin the
+requester's identity fingerprint (§2.3.3), out of band or by trust-on-first-use surfaced to its human.
+
+**Three signed A2A messages** (BP-04 §2 envelopes). The proof-of-possession on `connect.request` and
+`connect.confirm` is signed by the **identity** key (no grant key is trusted yet); capability calls
+after connect use the per-grant key as normal.
+
+1. **`connect.request`** (consumer → grantor). Body carries the requester's `system_id` and identity
+   key (inline or by `card_url`), the requested `capabilities` (`{capability, mode}`), a `member_hint`,
+   the consumer's freshly minted `grantee_public` (§4.1), and a requested visibility ceiling. The
+   grantor MUST verify the requester's card/identity and the PoP, confirm the requester key matches
+   the pin, and refuse any capability it does not `offer` in that mode (`cell_denied`).
+2. **`connect.issue`** (grantor → consumer). The grantor runs consent — auto-approve by policy for
+   S0/S1, or park `needs_human(consent_required)` for S2 or first contact (§6.2, BP-08). On approval
+   it mints its per-grant key, mints `grant_id`, builds the §5.3 grant (matrix = approved cells,
+   `action_execute: "dark"`, both per-grant public keys), signs `signatures.grantor` with its identity
+   key, and mints a token (§8). It responds with the grantor-signed grant + token,
+   `state: "pending_grantee_signature"` (or a `needs_human` block if parked).
+3. **`connect.confirm`** (consumer → grantor). The consumer MUST verify the issued grant — grantor
+   signature valid against the pinned card key; `grantee_public` is exactly the key it minted; matrix
+   ⊆ what it requested; no `write-direct` cell; `action_execute` dark; `member_lens` present and not a
+   child (§6.3). It then signs `signatures.grantee` over the same canonical body and stores the grant
+   behind the vault wall. The grantor attaches the grantee signature; the grant is now dual-signed and
+   in force (§5.4, §7.1) and the token is activated. Both sides journal `connect`.
+
+**Signature schemes (normative, so independent implementations interoperate).** The grant document
+signatures (`signatures.grantor`, `signatures.grantee`) are each a compact JWS (`alg: EdDSA`, `kid` =
+that system's identity key) whose payload is the JCS-canonical grant document with the `signatures`
+member removed; verification checks the decoded payload equals that canonical form **and** the
+signature is valid against the signer's identity key. The PoP on every message is the §4.2 JWS.
+
+**Failure modes.** Card/identity verify failure or unpinned fingerprint → abort before issue
+(`invalid_signature` / `fingerprint_unpinned`); unoffered capability or wrong mode → `cell_denied`;
+consent declined → `connect_declined`; S2 without §6.2 → parks, never auto-issues; a `connect.confirm`
+that never arrives → the issued-but-unconfirmed grant expires (grantor TTL, SHOULD ≤ 1 h) — no
+half-open grant lingers. After connect, capability calls, sync, propose-only relay, errors, and
+401-as-disconnect (BP-04) are unchanged; reconnecting supersedes any prior grant for the pair.
+
 ## 7. Grant lifecycle
 
 7.1 **Issue** — §6. The grant takes effect when both signatures exist and the first token is
@@ -454,8 +501,17 @@ grantee's 401-as-disconnect forget flow runs (BP-04 §8) and its forget audit re
 grantor's forget receipt includes the grant-key-destruction line with timestamp; a post-revoke
 `token.renew` fails; reconnection requires a full fresh consent flow and new keys.
 
+**AC-03.6 — Connect handshake (§6.4).** Drive the full exchange against the kit grantor: the consumer
+sends `connect.request` for an offered S1 capability; assert the grantor issues a grant whose grantor
+signature verifies, the consumer counter-signs, and the grant goes in force on both sides; a following
+capability call under the grant succeeds. Then assert each refusal: a `connect.request` signed by a
+key not matching the pin is refused (`invalid_signature`/`fingerprint_unpinned`) with no grant; a
+request for an unoffered capability returns `cell_denied`; an S2 request without §6.2 parks
+`needs_human` and never auto-issues; an issued grant left unconfirmed past the TTL is not in force; and
+a second successful connect supersedes the first grant for the pair (one active grant remains).
+
 ---
 
 *Done, for this spec, means: every decided position of the council brief is encoded without
-contradiction, the settled questions of §10 stand or return to the council named, and AC-03.1–5
+contradiction, the settled questions of §10 stand or return to the council named, and AC-03.1–6
 exist as kit tests that have been run, not asserted, before this document leaves draft.*
