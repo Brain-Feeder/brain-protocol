@@ -2,7 +2,7 @@
   "registry_format": 1,
   "registry_key": {
     "crv": "Ed25519",
-    "x": "SG__V-V7kbBTgybOfBMg2lJBevOhBZRiUfCMMb8UHRE",
+    "x": "hrbcUA7y3EEM8RDNG7SYZgVUYq2bBSfMDik4N9B6r88",
     "kty": "OKP",
     "use": "sig",
     "kid": "registry-1"
