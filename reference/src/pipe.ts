@@ -8,6 +8,7 @@ import { readFileSync, rmSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { createHash, randomBytes } from 'node:crypto';
+import { createServer } from 'node:net';
 import EmbeddedPostgres from 'embedded-postgres';
 import pgPkg from 'pg';
 import { validateRecord, isRegisteredScope } from './validate.js';
@@ -40,6 +41,20 @@ const zero = (): Counters => ({
   rejected_hop_limit: 0, rejected_ceiling: 0, rejected_sensitivity: 0, truncated_overcap: 0, passed_through_unknown: 0,
 });
 
+/* A guaranteed-free ephemeral port from the OS — avoids the random-port collisions that made the
+   suite flaky when several pipes start in one run. */
+function freePort(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const s = createServer();
+    s.once('error', reject);
+    s.listen(0, '127.0.0.1', () => {
+      const addr = s.address();
+      const port = typeof addr === 'object' && addr ? addr.port : 0;
+      s.close(() => resolve(port));
+    });
+  });
+}
+
 export class Pipe {
   private pg!: EmbeddedPostgres;
   private c!: InstanceType<typeof Client>;
@@ -49,12 +64,13 @@ export class Pipe {
   private dataDir: string;
 
   constructor(opts: { port?: number; dataDir?: string } = {}) {
-    this.port = opts.port ?? 55400 + Math.floor(Math.random() * 100);
+    this.port = opts.port ?? 0; // 0 = grab a guaranteed-free port at start (no random collisions)
     this.dataDir = opts.dataDir ?? `/tmp/brain-ref-${randomBytes(4).toString('hex')}`;
   }
 
   async start(): Promise<void> {
     if (this.started) return;
+    if (!this.port) this.port = await freePort();
     this.pg = new EmbeddedPostgres({ databaseDir: this.dataDir, user: 'postgres', password: 'postgres', port: this.port, persistent: false });
     await this.pg.initialise();
     await this.pg.start();
