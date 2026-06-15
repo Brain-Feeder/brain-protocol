@@ -31,18 +31,28 @@ Two ideas to hold from the start, because they shape every capability you design
 2. **Copy the reference provider.** `reference-provider/` is a small, runnable provider: it
    publishes a signed card, accepts the connect handshake (BP-03 §6.4), issues a dual-signed grant,
    and serves a capability under a bearer token plus a per-call proof of possession. Copy the
-   folder and swap in your data. Its `README.md` is the hands-on walkthrough.
+   folder and swap in your data. Its `README.md` is the hands-on walkthrough. `reference-provider/`
+   is the wire surface; for the data-layer laws (the eleven T-DAT tests - visibility, vault, journal,
+   forget, bounds) study `reference/`, whose `BUILD-ORDER.md` traces each law to the exact code. Copy
+   `reference-provider/` for the responder and `reference/` for the data layer.
 
 3. **Shape your card.** Declare each capability with a direction, a mode (`read`, later `propose`),
    and a sensitivity ceiling, against the schema in `schemas/agent-card.schema.json`. Decide your
-   projections here: what does each capability emit, and at what shareable tier. Honesty in the
-   card is a provider obligation - it is what every consumer relies on.
+   projections here: what does each capability emit, and at what shareable tier. Where a capability
+   can be shared at more than one tier, declare its `audiences` (the ascending tiers, e.g. `private`,
+   `shared:household`) so the consumer can offer a per-capability audience picker; omit it and the
+   consumer falls back to a single default (BP-03 §2.2). For a scheduled event, set `attributes.tz`
+   to the event's IANA timezone so a consumer renders a stable local clock time across DST (BP-01
+   §6). Honesty in the card is a provider obligation - it is what every consumer relies on.
 
-4. **Check your card before anyone connects.** Run the card checker against your own endpoint:
-   `node scripts/bp-card-check.mjs <your-card-url>` (in the Brainfeeder repo's `scripts/`, or use
-   the public sandbox). It verifies exactly what a consumer will see: that your URL is a safe public
-   HTTPS endpoint, your signature verifies, your protocol version is supported, and your offered
-   capabilities parse. Green here means a consumer can reach you.
+4. **Check your card before anyone connects.** Run the protocol-native checker from this repo:
+   `node kit/scripts/card-check.mjs <your-card-url>`. It works against `http://localhost:<port>`
+   while you build and against your public URL once deployed, and verifies exactly what a consumer
+   will see: a safe public HTTPS endpoint, a card signature that verifies against an identity key,
+   the pinned fingerprint, a body that matches `schemas/agent-card.schema.json`, a supported protocol
+   version, and at least one offered capability. A hosted sandbox a hub operates does the same over
+   the web if you prefer not to run anything locally. Green means a consumer can reach you, and you
+   never have to clone a consumer's code.
 
 5. **Meet the security bar.** `v2/BP-07-SECURITY-PRIVACY.md` is the normative security and privacy
    specification; `reference/SECURITY-REVIEW.md` is the appsec review a partner's security team
@@ -57,10 +67,14 @@ Two ideas to hold from the start, because they shape every capability you design
    "true stranger" clone is the precondition for connecting - it is the documented proof you meet
    the safety and oversight bar.
 
-7. **Connect.** With a green card and a green kit run, complete the handshake against a consumer
-   (see `reference-provider/connect-to-brainfeeder.mjs` for a worked client). The consumer verifies
-   and pins your card, you exchange keys and issue the scoped grant, it is counter-signed, and reads
-   begin within the grant.
+7. **Connect.** With a green card and a green kit run, complete the handshake. The consumer (a hub)
+   runs the consumer side and initiates; your provider is the grantor and responds to
+   `connect.request`/`connect.confirm`, exactly as `reference-provider/server.mjs` shows. The
+   consumer verifies and pins your card out of band (BP-03 §2.3.3), then initiates; you exchange keys
+   and issue the scoped grant, it is counter-signed, and reads begin within the grant. Before going
+   live, smoke-test your responder against the reference consumer (`reference-provider/connect-client.mjs`),
+   and against a real hub's staging endpoint if it offers one (`reference-provider/connect-to-brainfeeder.mjs`
+   is a worked client to adapt).
 
 ## Your responsibilities, stated plainly
 

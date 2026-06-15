@@ -4,7 +4,7 @@
   "title": "Brain Protocol v2 agent card",
   "description": "The machine-readable agent card every system publishes at /.well-known/brain-protocol/card.json (BP-03 §2). The card describes the system, never a connection: nothing grant-specific, member-specific or secret appears in it. The published artefact is a JWS (RFC 7515) over the canonical card body, signed with a key listed in identity_keys, alg EdDSA (Ed25519); this schema validates the card body. Unknown card fields MUST be ignored (forward compatibility).",
   "type": "object",
-  "required": ["card_format", "system_id", "name", "operator", "protocol_versions", "conformance", "identity_keys", "capabilities", "auth", "endpoints"],
+  "required": ["card_format", "system_id", "name", "operator", "protocol_versions", "conformance", "identity_keys", "capabilities", "endpoints"],
   "properties": {
     "card_format": { "const": 1, "description": "This schema's version." },
     "system_id": {
@@ -32,7 +32,7 @@
     "vocabulary": {
       "type": "object",
       "required": ["base_version"],
-      "description": "MUST for v2 — checked at connect (BP-03 §3.3, CD-6). A connection where either side's terms are neither base-vocabulary nor mapped does not proceed to sync.",
+      "description": "MUST for v2 - checked at connect (BP-03 §3.3, CD-6). A connection where either side's terms are neither base-vocabulary nor mapped does not proceed to sync.",
       "properties": {
         "base_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+$" },
         "mapping_table": { "type": "string", "format": "uri", "description": "URL of local-term mappings in the BP-01 §11 format." }
@@ -91,7 +91,13 @@
           },
           "sensitivity_ceiling": {
             "enum": ["S0", "S1", "S2"],
-            "description": "The highest class (BP-07) the capability ever carries. Never S3 — S3 never syncs."
+            "description": "The highest class (BP-07) the capability ever carries. Never S3 - S3 never syncs."
+          },
+          "audiences": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "type": "string", "pattern": "^(private|public|shared:[a-z][a-z0-9_-]*)$" },
+            "description": "OPTIONAL (v1.1, additive). The visibility tiers this capability may be shared at, in ascending order (e.g. private, shared:household). A consumer presents a per-capability audience picker over these tiers at connect and records the choice on the grant; an effective read clamps to the stricter of that choice and the grant ceiling (BP-03 §2.2). Absent: the consumer applies its own per-capability fallback, so a provider that omits it forgoes the picker."
           }
         }
       }
@@ -99,7 +105,7 @@
     "auth": {
       "type": "object",
       "required": ["type"],
-      "description": "Token endpoint set.",
+      "description": "OPTIONAL token endpoint set. A provider that mints tokens through the connect handshake (BP-03 §6.4) rather than OAuth omits this entirely (as the reference provider does); when present, type is oauth2.1.",
       "properties": {
         "type": { "const": "oauth2.1" },
         "authorize_url": { "type": "string", "format": "uri" },

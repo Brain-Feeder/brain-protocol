@@ -1,6 +1,6 @@
 {
   "name": "brain-tck",
-  "version": "2.0.0",
+  "version": "2.0.3",
   "private": true,
   "description": "Brain Protocol v2 Technology Compatibility Kit (Class D suite). Connects to a system under test as a peer plus a thin adapter, seeds, attacks, and asserts; emits machine-readable results (BP-09).",
   "type": "module",

@@ -93,6 +93,13 @@ never launders them into first-party fact (BP-05, BP-06). If the asker derives a
 from an answer, that derived record carries the connection as `source` (BP-06) — the answer
 itself is not stored.
 
+3.1.5 **The consumer chooses the query window; a provider MUST NOT assume a short default.** A live
+query MAY carry a time window (`from`/`to` ISO-8601 dates) and a page limit as its narrowest
+question. A provider whose data is naturally future-dated (scheduling that runs months ahead) MUST
+serve the requested window within its declared bounds, and a consumer MUST set a horizon wide enough
+for the capability rather than assume a short default - a fixed short window silently hides
+long-horizon data. The first calendar integration read empty for exactly this reason, 2026-06.
+
 ### 3.2 Subscription and presence
 
 3.2.1 `subscribe` delivers push notifications over A2A SSE. Each push is a full §2 envelope,

@@ -217,7 +217,7 @@ export class Pipe {
 
   /** A derived memory (summary) whose provenance reaches the connection (for forget tests). */
   async seedDerivedMemory(owner: string, provenance: string[], connection: string, doc: Record_): Promise<string> {
-    const id = `urn:brain:brainfeeder:entity:00000000-0000-4000-8000-${randomBytes(6).toString('hex')}`;
+    const id = `urn:brain:brain-reference:entity:00000000-0000-4000-8000-${randomBytes(6).toString('hex')}`;
     await this.c.query(
       `insert into derived_memory(id,owner,visibility,sensitivity,source,provenance,connection,doc)
        values($1,$2,'shared:household','S1','derived',$3,$4,$5)`,

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /* End-to-end smoke test against the LIVE Brainfeeder provider. Fetches Brainfeeder's card, runs the
-   connect handshake, then proposes a task — which must land on /connect under "Waiting for your
+   connect handshake, then proposes a task - which must land on /connect under "Waiting for your
    approval" (propose-only: nothing auto-writes). Reuses the reference consumer crypto.
    Run:  PROVIDER=https://brainfeeder.ai node connect-to-brainfeeder.mjs */
 
@@ -44,7 +44,7 @@ async function main() {
   const conf = await callRaw(a2a, 'connect.confirm', { grant_id: grant.grant_id, grantee_signature: granteeSig }, await signPoP(me.priv, me.kid, 'connect.confirm', { grant_id: grant.grant_id }));
   assert.ok(conf.body?.confirmed, `grant in force (got: ${JSON.stringify(conf)})`);
 
-  // 5. propose a task with token + per-grant proof — must park for a human
+  // 5. propose a task with token + per-grant proof - must park for a human
   const propBody = { title: 'Test task from the reference consumer', due_on: '2026-06-20', notes: 'If you can see this on /connect, the provider handshake works.' };
   const prop = await callRaw(a2a, 'task.propose', propBody, await signPoP(grantKey.priv, grantKey.kid, 'task.propose', propBody), token);
   assert.equal(prop.body?.state, 'needs_human', `proposal parked for a human (got: ${JSON.stringify(prop)})`);
@@ -53,9 +53,9 @@ async function main() {
   const stolen = await callRaw(a2a, 'task.propose', propBody, null, token);
   assert.ok(stolen.error, 'token without PoP refused');
 
-  console.log(`\nOK — connected to Brainfeeder and proposed a task.`);
+  console.log(`\nOK - connected to Brainfeeder and proposed a task.`);
   console.log(`Action id: ${prop.body.action_id}`);
-  console.log(`Now open /connect in Brainfeeder — it should be under "Waiting for your approval".`);
+  console.log(`Now open /connect in Brainfeeder - it should be under "Waiting for your approval".`);
 }
 
 main().catch((e) => { console.error('FAIL:', e.message); process.exit(1); });

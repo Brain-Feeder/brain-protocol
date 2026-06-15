@@ -76,8 +76,8 @@ export function validEdge(over: Partial<BrainRecord> = {}): BrainRecord {
 
 export function validAction(over: Partial<BrainRecord> = {}): BrainRecord {
   return {
-    id: urn('brainfeeder', 'action'),
-    type: 'action', subtype: 'book', source: 'brainfeeder',
+    id: urn('testsystem', 'action'),
+    type: 'action', subtype: 'book', source: 'testsystem',
     external_ref: 'action/3321', owner: 'mem-a', state: 'proposed',
     summary: 'Book GP appointment, Thu 18 Jun 09:00.',
     payload: { capability: 'appointment.book', slot: '2026-06-18T09:00:00Z' },
@@ -91,7 +91,7 @@ export function validAction(over: Partial<BrainRecord> = {}): BrainRecord {
 
 export function validGoalEntity(over: Partial<BrainRecord> = {}): BrainRecord {
   return {
-    id: urn('brainfeeder', 'entity'),
+    id: urn('testsystem', 'entity'),
     type: 'entity', subtype: 'goal', source: 'manual',
     external_ref: 'goal/run-10k', owner: 'mem-a',
     valid_time: '2026-06-01T00:00:00Z', system_time: '2026-06-01T08:00:00Z',

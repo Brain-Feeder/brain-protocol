@@ -29,7 +29,7 @@ async function main() {
   const me = await mint('consumer-id');
   const grantKey = await mint('consumer-grant');
 
-  // 3. connect.request — signed by our identity key
+  // 3. connect.request - signed by our identity key
   const reqBody = { requester: { system_id: 'consumer', identity_jwk: me.pub }, capabilities: [{ capability: 'notes.read', mode: 'read' }], grantee_public: grantKey.pub, member_hint: 'mem-x', nonce: nonce() };
   const issue = await callRaw(a2a, 'connect.request', reqBody, await signPoP(me.priv, me.kid, 'connect.request', reqBody));
   assert.ok(issue.body?.grant, 'grant issued');

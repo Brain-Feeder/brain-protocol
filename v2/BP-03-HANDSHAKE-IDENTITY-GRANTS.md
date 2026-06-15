@@ -72,13 +72,13 @@ or secret appears in it.
     { "name": "appointment.book",  "direction": "offer",   "modes": ["propose"],
       "sensitivity_ceiling": "S1" },
     { "name": "appointment.read",  "direction": "offer",   "modes": ["read"],
-      "sensitivity_ceiling": "S1" },
+      "sensitivity_ceiling": "S1", "audiences": ["private", "shared:household"] },
     { "name": "health_record.summary", "direction": "offer", "modes": ["read"],
       "sensitivity_ceiling": "S2" },               // S2 offer ⇒ verified certification (CD-2)
     { "name": "report.submit",     "direction": "consume", "modes": ["propose"],
       "sensitivity_ceiling": "S2" }
   ],
-  "auth": { "type": "oauth2.1",                   // MUST — token endpoint set
+  "auth": { "type": "oauth2.1",                   // optional - omit if tokens come from the connect handshake (§6.4)
     "authorize_url": "https://clinic.example/oauth/authorize",
     "token_url": "https://clinic.example/oauth/token" },
   "endpoints": {                                  // MUST — at least one of a2a | mcp
@@ -94,7 +94,12 @@ Field rules: `capabilities[].direction` is `offer` (we serve it) or `consume` (w
 `modes` is a subset of `read | propose` — `write-direct` never appears on a card because it never
 crosses a boundary (§5.2); `sensitivity_ceiling` is the highest class (BP-07) the capability ever
 carries. An `offer` of an S2-ceiling capability at any class requires verified certification
-(CD-2). Unknown card fields MUST be ignored (forward compatibility).
+(CD-2). A capability that may be shared at more than one visibility tier SHOULD declare `audiences`
+(v1.1, additive): the ascending list of tiers it is shareable at. A consumer presents a
+per-capability audience picker over those tiers at connect and records the choice on the grant; a
+read clamps to the stricter of the user's choice and the grant ceiling. Absent `audiences`, the
+consumer applies its own fallback, so a provider that omits it forgoes the per-capability picker.
+Unknown card fields MUST be ignored (forward compatibility).
 
 ### 2.3 Card signing — mandatory
 

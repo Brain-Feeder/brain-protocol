@@ -13,7 +13,7 @@ function gateAdapter(ctx: TestContext): Adapter {
   return ctx.adapter;
 }
 
-const ACTION = 'urn:brain:brainfeeder:action:00000000-0000-4000-8000-00000000ga01';
+const ACTION = 'urn:brain:testsystem:action:00000000-0000-4000-8000-00000000ga01';
 const HASH_A = sha256Prefixed('payload-A');
 const HASH_B = sha256Prefixed('payload-B');
 
@@ -68,7 +68,7 @@ defineTest({
   async run(ctx) {
     const w = new WireClient(ctx.target!);
     await w.handshake({ matrix: [{ capability: 'appointment.book', direction: 'offer', mode: 'propose', sensitivity_ceiling: 'S1' }], actionExecute: 'enabled' });
-    const expired = { id: 'urn:brain:brainfeeder:action:00000000-0000-4000-8000-0000000exp1', expires_at: new Date(Date.now() - 60_000).toISOString() };
+    const expired = { id: 'urn:brain:testsystem:action:00000000-0000-4000-8000-0000000exp1', expires_at: new Date(Date.now() - 60_000).toISOString() };
     const r = await w.call('action.execute', { action: expired });
     ctx.note('execute expired draft', { status: r.status, body: r.body });
     ctx.check(r.body?.error?.code === 'expired_draft', 'BP-08 §2.1', 'an expired draft can never execute');
@@ -82,7 +82,7 @@ defineTest({
   async run(ctx) {
     const w = new WireClient(ctx.target!);
     await w.handshake({ matrix: [{ capability: 'appointment.book', direction: 'offer', mode: 'propose', sensitivity_ceiling: 'S1' }] }); // action_execute defaults dark
-    const r = await w.call('action.execute', { action: { id: 'urn:brain:brainfeeder:action:00000000-0000-4000-8000-0000000drk1' } });
+    const r = await w.call('action.execute', { action: { id: 'urn:brain:testsystem:action:00000000-0000-4000-8000-0000000drk1' } });
     ctx.note('fresh connection action.execute', r.body);
     ctx.check(r.body?.body?.state === 'proposed', 'BP-08 §2.1',
       'a fresh connection\'s action.execute must return "proposed, not executed" until writes are enabled');

@@ -107,7 +107,7 @@
     },
     "attributes": {
       "type": "object",
-      "description": "Subtype-specific fields. attributes.name is MUST on entities; attributes.title is MUST on activities; attributes.summary SHOULD be present. Money is integer minor units plus ISO 4217 currency (amount_minor, currency). All-day flag travels as attributes.all_day; recurrence as attributes.recurrence (RFC 5545 RRULE) (BP-01 §5.5, §6)."
+      "description": "Subtype-specific fields. attributes.name is MUST on entities; attributes.title is MUST on activities; attributes.summary SHOULD be present. Money is integer minor units plus ISO 4217 currency (amount_minor, currency). All-day flag travels as attributes.all_day; recurrence as attributes.recurrence (RFC 5545 RRULE). A venue-anchored scheduled event carries attributes.tz as an IANA timezone (e.g. Europe/London) so a consumer renders a stable wall-clock time across DST; valid_time stays a UTC instant for ordering (BP-01 §5.5, §6)."
     },
     "summary": { "type": "string", "minLength": 1 },
     "payload": { "type": "object" },
