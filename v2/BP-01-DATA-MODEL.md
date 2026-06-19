@@ -213,6 +213,12 @@ axes silently corrupts history and is tested (AC-01.2).
 4. All-day and date-only semantics follow iCalendar: the flag travels as
    `attributes.all_day: true` with `interval` at day boundaries in the record's local zone
    expressed in UTC; recurrence travels as `attributes.recurrence` (an RFC 5545 RRULE string).
+5. A venue-anchored event - one fixed to a local clock at a place, such as a recording session -
+   carries `attributes.tz` as an IANA timezone name (e.g. `Europe/London`). `valid_time` and
+   `interval` stay UTC instants for ordering, but a consumer rendering the event to a human MUST
+   display it in `attributes.tz` when present, so the local clock time stays put across a DST
+   transition; absent `tz`, a consumer renders in its own default zone and MAY drift. Surfaced by
+   the first calendar integration, 2026-06.
 
 ## 7. State machines
 

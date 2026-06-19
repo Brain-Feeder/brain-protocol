@@ -111,10 +111,10 @@ function forgetRows(): BrainRecord[] {
     // origin_chain arm: chain contains FCONN, different source/tag.
     validActivity({ id: urn('garagebrain', 'activity'), source: 'garagebrain', external_ref: 'f/chain', owner: 'mem-a', origin_chain: ['garagebrain', FCONN] }),
     // provenance arm: derived record whose provenance is minted by FCONN.
-    validPerson({ id: urn('brainfeeder', 'entity'), source: 'derived', subtype: 'fact', external_ref: 'f/prov', owner: 'mem-a', provenance: [provUrn] }),
+    validPerson({ id: urn('testsystem', 'entity'), source: 'derived', subtype: 'fact', external_ref: 'f/prov', owner: 'mem-a', provenance: [provUrn] }),
     // an edge and action tagged by the connection (the connection arm via opts.connection).
     validEdge({ id: urn('garagebrain', 'edge') }),
-    validAction({ id: urn('brainfeeder', 'action'), external_ref: 'f/action', owner: 'mem-a' }),
+    validAction({ id: urn('testsystem', 'action'), external_ref: 'f/action', owner: 'mem-a' }),
   ];
 }
 
@@ -241,12 +241,12 @@ defineTest({
   name: 'provenance totality', clause: 'BP-02 §3.3',
   async run(ctx) {
     const a = adapter(ctx); await a.reset(); resetUuids();
-    const derivedNoProv = validPerson({ id: urn('brainfeeder', 'entity'), source: 'derived', subtype: 'fact', external_ref: 'd/noprov', owner: 'mem-a' });
+    const derivedNoProv = validPerson({ id: urn('testsystem', 'entity'), source: 'derived', subtype: 'fact', external_ref: 'd/noprov', owner: 'mem-a' });
     const r = await a.seedAs(A, [derivedNoProv], { connection: 'tck' });
     ctx.note('derived-without-provenance', r.rejected);
     ctx.check(r.rejected.length === 1 && r.accepted.length === 0, 'BP-02 §3.3',
       'a derived write without attributable provenance must be rejected at the storage layer');
-    const ok = await a.seedAs(A, [validPerson({ id: urn('brainfeeder', 'entity'), source: 'derived', subtype: 'fact', external_ref: 'd/prov', owner: 'mem-a', provenance: [urn('garagebrain', 'entity')] })], { connection: 'tck' });
+    const ok = await a.seedAs(A, [validPerson({ id: urn('testsystem', 'entity'), source: 'derived', subtype: 'fact', external_ref: 'd/prov', owner: 'mem-a', provenance: [urn('garagebrain', 'entity')] })], { connection: 'tck' });
     ctx.check(ok.accepted.length === 1, 'BP-02 §3.3', 'a derived write with provenance is accepted');
   },
 });

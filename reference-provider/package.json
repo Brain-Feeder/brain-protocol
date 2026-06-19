@@ -6,7 +6,7 @@
   "description": "Runnable reference: become a connectable Brain Protocol provider (card + connect handshake + capability serving).",
   "scripts": {
     "start": "node server.mjs",
-    "test": "node server.mjs & SRV=$!; sleep 1.5; node connect-client.mjs; R=$?; kill $SRV 2>/dev/null; exit $R"
+    "test": "node server.mjs & SRV=$!; sleep 1.5; node connect-client.mjs && node propose-example.mjs; R=$?; kill $SRV 2>/dev/null; exit $R"
   },
   "dependencies": {
     "jose": "^5.0.0"

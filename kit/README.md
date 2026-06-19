@@ -5,6 +5,9 @@ peer and through a thin adapter, seeds, attacks, and asserts, then emits a machi
 results file you publish for self-certification. Green is the precondition for connecting to the
 mesh (INDEX step 9, BP-09 §2).
 
+**Status:** Class D suite, 46 tests, green from a clean clone (CI-gated; the reference pipe self-
+certifies and `break-a-law` proves the suite bites). Suite version 2.0.3.
+
 ## Quickstart
 
 From a clean clone, the whole Class D run is one command:
