@@ -1,0 +1,17 @@
+{
+  "system_id": "rbfc",
+  "card_url": "https://aibrain.realbedford.com/.well-known/brain-protocol/card.json",
+  "card_key_fingerprint": "ed25519:2d3df426472bab3c2cd3cf8214246943",
+  "class": "D",
+  "suite_version": "2.0.3",
+  "certification": { "tier": "self", "issued": "2026-06-20" },
+  "tck": {
+    "version": "2.0.3",
+    "kit_commit": "f712aea",
+    "result": "46/46 pass",
+    "passed_at": "2026-06-20",
+    "results_url": "https://aibrain.realbedford.com/conformance/2.0.3.json"
+  },
+  "status": "active",
+  "revocation": null
+}
