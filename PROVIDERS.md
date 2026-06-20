@@ -67,6 +67,18 @@ Two ideas to hold from the start, because they shape every capability you design
    "true stranger" clone is the precondition for connecting - it is the documented proof you meet
    the safety and oversight bar.
 
+   Two things partners reliably trip on here. First, the kit drives a **fixed harness contract**, not
+   your production surface: it calls fixed endpoints (`/api/agent/a2a`, `/oauth/token`, `/test/*`) and
+   a fixed vocabulary (`calendar.read`, `records.*`, `appointment.book`, `action.execute`) read as
+   member `mem-a` - it does not use your card's endpoints or your real capability names. Stand up a
+   conformance build exposing that harness over your own data layer; your real capabilities
+   (`fixtures.read`, `brain.read`, etc.) are what production consumers use, and the kit never calls
+   them. Second, the cert only means something if **your** code is under test: your crypto, your
+   boundary validator, and your wire policy (nonce/replay, rate, loop guard, SSRF, sensitivity floors,
+   dark-by-default) must be the same modules production runs - not a conformance-only copy, and not the
+   vendored reference server standing in for them. SSRF in particular: a harness-only guard is a
+   passing cert *and* an exposed production node.
+
 7. **Connect.** With a green card and a green kit run, complete the handshake. The consumer (a hub)
    runs the consumer side and initiates; your provider is the grantor and responds to
    `connect.request`/`connect.confirm`, exactly as `reference-provider/server.mjs` shows. The
@@ -75,6 +87,29 @@ Two ideas to hold from the start, because they shape every capability you design
    live, smoke-test your responder against the reference consumer (`reference-provider/connect-client.mjs`),
    and against a real hub's staging endpoint if it offers one (`reference-provider/connect-to-brainfeeder.mjs`
    is a worked client to adapt).
+
+## Where to run your node
+
+Your provider is its own small deployment with its own address. Get this right before you sign or
+connect, because the failure modes are silent.
+
+- **Own origin, not someone else's.** Deploy the node on a domain you control and dedicate to it
+  (e.g. `node.yourorg.com` via a custom domain). Do not co-locate it on the hub's domain, and avoid
+  putting it on an existing app whose routing or auth may swallow the card path. A separate project is
+  cleanest, so the node and anything else deploy independently.
+- **The card must serve fast, public, and unredirected.** `GET /.well-known/brain-protocol/card.json`
+  has to return the signed JSON over TLS with no auth and no redirect (BP-03 §2.1.2). If it is served
+  by a dynamic route, make sure the identity key is set and the deploy has propagated before you
+  submit - a card that hangs or returns empty is the single most common "it won't connect".
+- **`endpoints.a2a` must be your final public origin**, not a `*.vercel.app` preview - the card is
+  signed and consumers pin against it. Set your public-origin config to the custom domain, then deploy
+  the card.
+- **Verify from outside.** Run `node kit/scripts/card-check.mjs <your-card-url>` from a machine that
+  is not yours. If it hangs or comes back empty for an outside caller, no hub can connect, whatever
+  your build logs say.
+- **Keep the data plane you certify the data plane you serve.** If conformance ran against one store
+  but production serves from another, the laws (visibility, journal, vault, forget) were proven
+  against a store your node doesn't use. They must be the same.
 
 ## Your responsibilities, stated plainly
 
@@ -85,6 +120,9 @@ controller/processor terms make it explicit.
 
 ## Where to get help
 
+- **Stuck on a specific error or step: [`TROUBLESHOOTING.md`](./TROUBLESHOOTING.md)** - real
+  symptom-to-fix entries from actual onboardings (`no_member_lens`, a dead card URL, the harness
+  vocabulary, the registration vs entry-file confusion, and more).
 - Conceptual questions: `FAQ.md`.
 - The normative specifications: `v2/INDEX.md` lists BP-00 through BP-10.
 - Security issues: report privately per the security policy, never as a public issue.
