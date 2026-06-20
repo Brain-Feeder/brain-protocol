@@ -39,6 +39,38 @@
         "payload": "Y2VhODY3MjRhMzYzZGMxMzM3MjM2NTkxYzgzZGVlMjkzNTQ5ZWE3ZmYyOWRiMWUyOGMyZGMzZmZlYTQ5MGM2OQ",
         "protected": "eyJhbGciOiJFZERTQSJ9"
       }
+    },
+    {
+      "seq": 1,
+      "at": "2026-06-20T12:19:48.418Z",
+      "type": "register",
+      "payload": {
+        "system_id": "rbfc",
+        "card_url": "https://aibrain.realbedford.com/.well-known/brain-protocol/card.json",
+        "card_key_fingerprint": "ed25519:2d3df426472bab3c2cd3cf8214246943",
+        "class": "D",
+        "suite_version": "2.0.3",
+        "certification": {
+          "tier": "self",
+          "issued": "2026-06-20"
+        },
+        "tck": {
+          "version": "2.0.3",
+          "kit_commit": "f712aea",
+          "result": "46/46 pass",
+          "passed_at": "2026-06-20",
+          "results_url": "https://aibrain.realbedford.com/conformance/2.0.3.json"
+        },
+        "status": "active",
+        "revocation": null
+      },
+      "prev_hash": "cea86724a363dc1337236591c83dee293549ea7ff29db1e28c2dc3ffea490c69",
+      "hash": "a495d722acea06c11020246048d563ebca35a2dac5e6ec5e22e9bcd993da1f2f",
+      "sig": {
+        "signature": "tmNVGGWuVSk2knIAvT2XznZvcYUjea8uJIb1fi5RbdHTHViG1Z0MxIVZmCZmfAVIW2psnqFBSK6xvMttfzAADQ",
+        "payload": "YTQ5NWQ3MjJhY2VhMDZjMTEwMjAyNDYwNDhkNTYzZWJjYTM1YTJkYWM1ZTZlYzVlMjJlOWJjZDk5M2RhMWYyZg",
+        "protected": "eyJhbGciOiJFZERTQSJ9"
+      }
     }
   ]
 }
